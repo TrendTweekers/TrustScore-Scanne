@@ -14,10 +14,10 @@ export function useAuthenticatedFetch() {
     
     if (response.status === 403) {
       if (response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1") {
-        const authUrlHeader = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
-        if (authUrlHeader) {
+        const reauthUrl = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
+        if (reauthUrl) {
           const redirect = Redirect.create(app);
-          redirect.dispatch(Redirect.Action.REMOTE, authUrlHeader);
+          redirect.dispatch(Redirect.Action.REMOTE, reauthUrl);
         }
         return Promise.reject(new Error('Reauthorization required'));
       }

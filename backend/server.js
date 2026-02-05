@@ -60,9 +60,8 @@ const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
 
 // MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
-app.use(['/api', '/api/*'], (req, _res, next) => {
+app.use(['/api', '/api/*'], (req, res, next) => {
   req.headers['x-requested-with'] = 'XMLHttpRequest';
-  req.headers['check-iframe'] = '1';
   next();
 });
 
