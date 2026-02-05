@@ -149,50 +149,17 @@ const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
 console.log('Trust proxy set to 1');
 
+// 1. Raw Request Logger (Must be first)
+app.use((req, res, next) => {
+  console.log(`[RAW REQUEST] ${req.method} ${req.path}`);
+  next();
+});
+
 console.log("=== SERVER STARTING ===");
 console.log("Auth path:", shopify.config.auth.path);
 console.log("Callback path:", shopify.config.auth.callbackPath);
 
-// Debug: Ping route (unprotected)
-app.get('/api/ping', (req, res) => {
-  console.log("Ping hit from:", req.get('origin') || 'unknown');
-  res.json({ status: "alive", timestamp: new Date() });
-});
-
-app.get('/api/session-status', (req, res) => {
-  // Try to access redis client status if possible
-  const redisConnected = sessionStorage instanceof RedisSessionStorage && sessionStorage.client 
-      ? sessionStorage.client.isOpen 
-      : 'unknown/not-using-redis';
-
-  res.json({
-    hasSession: !!res.locals.shopify?.session,
-    shop: res.locals.shopify?.session?.shop,
-    hasToken: !!res.locals.shopify?.session?.accessToken,
-    redisConnected
-  });
-});
-
-// MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
-app.use((req, res, next) => {
-  // DO NOT force header for auth routes!
-  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/auth')) {
-    console.log(`Header middleware running on ${req.path}`);
-    req.headers['x-requested-with'] = 'XMLHttpRequest';
-    console.log(`Forced x-requested-with header on ${req.path} | from ${req.get('origin') || 'unknown'}`);
-  }
-  next();
-});
-
-// Fallback: Ensure shop domain header is present for Shopify middleware
-app.use('/api/*', (req, res, next) => {
-  if (!req.headers['x-shopify-shop-domain']) {
-    req.headers['x-shopify-shop-domain'] = req.query.shop || req.headers['x-shopify-shop-domain'];
-  }
-  next();
-});
-
-// Set up Shopify authentication and webhook handling
+// 2. Auth Routes (Must be before body parsers and other middleware)
 app.get(
   shopify.config.auth.path,
   (req, res, next) => {
@@ -205,6 +172,7 @@ app.get(
   },
   shopify.auth.begin()
 );
+
 app.get(
   shopify.config.auth.callbackPath,
   (req, res, next) => {
@@ -247,10 +215,53 @@ app.get(
   shopify.redirectToShopifyOrAppRoot()
 );
 
+// 3. Webhooks (Must be before body parsers)
 app.post(
   shopify.config.webhooks.path,
   shopify.processWebhooks({ webhookHandlers })
 );
+
+// Debug: Ping route (unprotected)
+app.get('/api/ping', (req, res) => {
+  console.log("Ping hit from:", req.get('origin') || 'unknown');
+  res.json({ status: "alive", timestamp: new Date() });
+});
+
+app.get('/api/session-status', (req, res) => {
+  // Try to access redis client status if possible
+  const redisConnected = sessionStorage instanceof RedisSessionStorage && sessionStorage.client 
+      ? sessionStorage.client.isOpen 
+      : 'unknown/not-using-redis';
+
+  res.json({
+    hasSession: !!res.locals.shopify?.session,
+    shop: res.locals.shopify?.session?.shop,
+    hasToken: !!res.locals.shopify?.session?.accessToken,
+    redisConnected
+  });
+});
+
+// MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
+app.use((req, res, next) => {
+  // DO NOT force header for auth routes!
+  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/auth')) {
+    console.log(`Header middleware running on ${req.path}`);
+    req.headers['x-requested-with'] = 'XMLHttpRequest';
+    console.log(`Forced x-requested-with header on ${req.path} | from ${req.get('origin') || 'unknown'}`);
+  }
+  next();
+});
+
+// Fallback: Ensure shop domain header is present for Shopify middleware
+app.use('/api/*', (req, res, next) => {
+  if (!req.headers['x-shopify-shop-domain']) {
+    req.headers['x-shopify-shop-domain'] = req.query.shop || req.headers['x-shopify-shop-domain'];
+  }
+  next();
+});
+
+// Set up Shopify authentication and webhook handling
+// (Moved to top of middleware stack)
 
 // All /api/* requests (except auth/webhooks) must be authenticated
 app.use(['/api', '/api/*'], shopify.validateAuthenticatedSession());
