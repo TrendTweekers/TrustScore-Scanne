@@ -44,14 +44,6 @@ sessionStorage.deleteSession = async (id) => {
 
 if (sessionStorage instanceof RedisSessionStorage) {
   console.log("Using Redis Session Storage - REDIS_URL:", process.env.REDIS_URL ? "set" : "MISSING");
-  // Check Redis connection
-  if (sessionStorage.client) {
-      sessionStorage.client.ping().then((res) => {
-          console.log("Redis PING response:", res);
-      }).catch(err => {
-          console.error("Redis PING failed:", err);
-      });
-  }
 } else {
     console.log("Using SQLite Session Storage");
 }
