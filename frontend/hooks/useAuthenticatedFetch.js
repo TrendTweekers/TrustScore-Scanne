@@ -28,8 +28,10 @@ export function useAuthenticatedFetch() {
       } else if (response.status === 302) {
         const location = response.headers.get('Location');
         if (location) {
-            console.log('302 redirect detected - forcing top redirect to:', location);
-            window.top.location.href = location;
+            const host = import.meta.env.VITE_HOST || 'https://trustscore-scanne-production.up.railway.app';
+            const fullUrl = location.startsWith('/') ? `${host}${location}` : location;
+            console.log('302 redirect detected - forcing top redirect to:', fullUrl);
+            window.top.location.href = fullUrl;
             return new Promise(() => {});
         }
       }
