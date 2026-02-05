@@ -94,7 +94,7 @@ const shopify = shopifyApp({
   api: {
     apiKey: process.env.SHOPIFY_API_KEY,
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
-    scopes: ['read_products', 'read_themes', 'write_themes'], // Adjusted scopes as needed
+    scopes: (process.env.SCOPES || 'read_products,read_themes').split(','),
     apiVersion: LATEST_API_VERSION,
     hostName: process.env.HOST?.replace(/https:\/\//, ''),
   },
@@ -262,6 +262,16 @@ app.use('/api/*', (req, res, next) => {
 
 app.use(express.json());
 app.use(shopify.cspHeaders()); // Ensure CSP headers are set
+
+// Cookie Debug Middleware
+app.use((req, res, next) => {
+  if (req.url.includes('/api/')) {
+    console.log('[Cookie Debug] Path:', req.url);
+    console.log('[Cookie Debug] Cookies:', req.cookies);
+    console.log('[Cookie Debug] Headers cookie:', req.headers.cookie);
+  }
+  next();
+});
 
 // API Routes
 app.use('/api', scannerRoutes);
