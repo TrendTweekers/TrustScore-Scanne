@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs } from '@shopify/polaris';
+import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import TrustScore from './TrustScore';
 import ScoreInfo from './ScoreInfo';
@@ -9,6 +10,7 @@ import { FAQ } from './FAQ';
 
 function Dashboard() {
   const app = useAppBridge();
+  console.log("useAppBridge SUCCESS:", app);
   const fetch = useAuthenticatedFetch();
   const [dashboardData, setDashboardData] = useState(null);
 

@@ -14,4 +14,9 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
     },
   },
+  resolve: {
+    alias: {
+      '@shopify/app-bridge-react': '@shopify/app-bridge-react',
+    }
+  }
 });
