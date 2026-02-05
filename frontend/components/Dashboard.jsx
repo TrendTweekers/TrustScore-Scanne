@@ -18,7 +18,11 @@ function Dashboard() {
     if (app) {
       console.log('App Bridge ready - checking embedded status');
       // Test ping
-      fetch('/api/ping').then(r => r.json()).then(d => console.log("Ping success:", d)).catch(e => console.error("Ping failed:", e));
+      fetch('/api/ping').then(r => r.json()).then(d => {
+        console.log("Ping success:", d);
+        // Check session status
+        fetch('/api/session-status').then(r => r.json()).then(s => console.log("Session Status:", s)).catch(e => console.error("Session check failed:", e));
+      }).catch(e => console.error("Ping failed:", e));
     }
   }, [app]);
   const [scanResult, setScanResult] = useState(null);

@@ -15,14 +15,48 @@ const __dirname = path.dirname(__filename);
 const FRONTEND_PATH = path.join(__dirname, '../dist');
 
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(process.cwd(), "database.sqlite");
-
-const sessionStorage =
+const DB_PATH = path.join(process.cwd(), "database.sqlite");const sessionStorage =
   process.env.REDIS_URL && process.env.REDIS_URL.trim() !== ""
     ? new RedisSessionStorage(process.env.REDIS_URL)
     : new SQLiteSessionStorage(DB_PATH);
 
-// Billing Configuration
+if (sessionStorage instanceof RedisSessionStorage) {
+  // Hack to access internal client or we can trust the library throws if it fails.
+  // Actually, let's just create a separate client for the health check if we want to be 100% sure.
+  // But wait, the user asked to "redisClient.ping()". 
+  // RedisSessionStorage doesn't expose 'client' publicly in all versions. 
+  // Let's assume we can access it or just create a temporary one for the check.
+  // Better approach: Since we don't have 'redis' package imported to create a client easily without adding deps,
+  // we will try to use the one from sessionStorage if possible or skip if not.
+  // However, the user provided specific code: redisClient.ping()...
+  // This implies they might think we have a redisClient variable. We don't.
+  // I will add a check using the sessionStorage's client if accessible, or add a comment that we are skipping explicit ping 
+  // if we can't access it, but actually, let's try to see if we can just import redis.
+  // Actually, I'll use the user's intent: "Add Redis connection check". 
+  // I will assume I can use the client from the storage if I cast it (it usually has a client property).
+  console.log("Using Redis Session Storage");
+  // Check if we can access the client
+  if (sessionStorage.client) {
+      sessionStorage.client.ping().then(() => {
+        console.log("Redis connection OK");
+      }).catch(err => {
+        console.error("Redis connection FAILED:", err);
+      });
+  } else {
+      console.log("Redis client not directly accessible on sessionStorage object for ping check.");
+  }
+} else {
+    console.log("Using SQLite Session Storage");
+}
+
+console.log("Shopify app config:", {
+  apiKey: process.env.SHOPIFY_API_KEY ? "set" : "missing",
+  scopes: process.env.SCOPES || process.env.SHOPIFY_API_SCOPES || "read_products,read_themes,write_themes",
+  useOnlineTokens: false, 
+  isEmbeddedApp: true
+});
+
+const shopify = shopifyApp({// Billing Configuration
 export const BILLING_PLANS = {
   PRO: {
     amount: 29.00,
@@ -77,6 +111,20 @@ app.get('/api/ping', (req, res) => {
   res.json({ status: "alive", timestamp: new Date() });
 });
 
+app.get('/api/session-status', (req, res) => {
+  // Try to access redis client status if possible
+  const redisConnected = sessionStorage instanceof RedisSessionStorage && sessionStorage.client 
+      ? sessionStorage.client.isOpen 
+      : 'unknown/not-using-redis';
+
+  res.json({
+    hasSession: !!res.locals.shopify?.session,
+    shop: res.locals.shopify?.session?.shop,
+    hasToken: !!res.locals.shopify?.session?.accessToken,
+    redisConnected
+  });
+});
+
 // MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) {
@@ -103,6 +151,7 @@ app.get(
   async (req, res, next) => {
     // Post-authentication hook to save shop to DB
     const session = res.locals.shopify.session;
+    console.log("Session created and saved | shop:", session.shop, "id:", session.id, "accessToken:", !!session.accessToken);
     await createOrUpdateShop(session.shop, session.accessToken);
     next();
   },
@@ -120,9 +169,9 @@ app.use(['/api', '/api/*'], shopify.validateAuthenticatedSession());
 // Log session status after validation
 app.use('/api/*', (req, res, next) => {
   if (res.locals.shopify?.session) {
-    console.log('Valid session found | shop:', res.locals.shopify.session.shop);
+    console.log("Session VALID | shop:", res.locals.shopify.session.shop, "expires:", res.locals.shopify.session.expires);
   } else {
-    console.log('No session found in request context');
+    console.log("Session MISSING or invalid in request");
   }
   next();
 });
