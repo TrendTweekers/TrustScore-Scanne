@@ -149,11 +149,30 @@ app.use('/api/*', (req, res, next) => {
 app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
   shopify.config.auth.callbackPath,
+  (req, res, next) => {
+    console.log("=== OAuth callback received ===");
+    console.log("Query params:", req.query);
+    console.log("Shop:", req.query.shop);
+    console.log("Code present:", !!req.query.code);
+    console.log("HMAC present:", !!req.query.hmac);
+    next();
+  },
   shopify.auth.callback(),
   async (req, res, next) => {
     // Post-authentication hook to save shop to DB
     const session = res.locals.shopify.session;
-    console.log("Session created and saved | shop:", session.shop, "id:", session.id, "accessToken:", !!session.accessToken);
+    if (session) {
+        console.log("Session successfully created!");
+        console.log("Shop:", session.shop);
+        console.log("Access token length:", session.accessToken?.length || "missing");
+        console.log("Session ID:", session.id);
+        console.log("Expires:", session.expires);
+        console.log("Attempted to store session in Redis for shop:", session.shop);
+    } else {
+        console.log("Session creation FAILED — no session object");
+    }
+
+    // console.log("Session created and saved | shop:", session.shop, "id:", session.id, "accessToken:", !!session.accessToken);
     await createOrUpdateShop(session.shop, session.accessToken);
     next();
   },
@@ -216,6 +235,7 @@ app.use('/*', shopify.ensureInstalledOnShop(), async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log("Expected OAuth callback URL:", `${process.env.HOST}/api/auth/callback`);
 });
 
 module.exports = { BILLING_PLANS };
