@@ -12,12 +12,15 @@ export function useAuthenticatedFetch() {
     };
     const response = await fetch(uri, { ...options, headers });
     
-    if (response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1") {
-      const authUrlHeader = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
-      const redirect = Redirect.create(app);
-      redirect.dispatch(Redirect.Action.REMOTE, authUrlHeader || '/api/auth');
-      // Return a pending promise to halt execution while redirecting
-      return new Promise(() => {});
+    if (response.status === 403) {
+      if (response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1") {
+        const authUrlHeader = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
+        if (authUrlHeader) {
+          const redirect = Redirect.create(app);
+          redirect.dispatch(Redirect.Action.REMOTE, authUrlHeader);
+        }
+        return Promise.reject(new Error('Reauthorization required'));
+      }
     }
 
     return response;
