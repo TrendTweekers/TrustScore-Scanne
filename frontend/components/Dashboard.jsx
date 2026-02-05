@@ -8,7 +8,6 @@ import { OnboardingModal } from './OnboardingModal';
 import { UpgradeModal } from './UpgradeModal';
 import { CompetitorComparison } from './CompetitorComparison';
 import { ScoreChart } from './ScoreChart';
-import { Testimonials } from './Testimonials';
 import { FAQ } from './FAQ';
 
 function Dashboard() {
@@ -136,8 +135,12 @@ function Dashboard() {
       );
   }
 
-  const { currentScore, trend, history, plan, scanCount } = dashboardData;
+  const { currentScore, trend, history, plan, scanCount, aiUsage } = dashboardData;
   const isFree = plan === 'FREE';
+
+  const lastScannedDate = history.length > 0 ? new Date(history[0].timestamp || history[0].createdAt) : null;
+  const hoursAgo = lastScannedDate ? Math.floor((new Date() - lastScannedDate) / (1000 * 60 * 60)) : 0;
+  const lastScannedText = lastScannedDate ? (hoursAgo < 1 ? 'Just now' : `${hoursAgo} hours ago`) : '';
 
   const tabs = [
       { id: 'dashboard', content: 'Dashboard' },
@@ -150,7 +153,7 @@ function Dashboard() {
         title="TrustScore Dashboard" 
         primaryAction={
             <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
-                {scanCount === 0 ? 'Run Initial Scan' : 'Run New Scan'}
+                {scanCount === 0 ? 'Scan Store (60 seconds)' : 'Run New Scan'}
             </Button>
         }
     >
@@ -227,6 +230,7 @@ function Dashboard() {
                             <BlockStack gap="200">
                                 <Text tone="subdued">Current Score</Text>
                                 <Text variant="heading3xl" as="h2">{currentScore}/100</Text>
+                                {lastScannedText && <Text tone="subdued" variant="bodySm">Last scanned: {lastScannedText}</Text>}
                             </BlockStack>
                             <BlockStack gap="200">
                                 <Text tone="subdued">Trend</Text>
@@ -238,6 +242,11 @@ function Dashboard() {
                                 <Text tone="subdued">Plan Usage</Text>
                                 <Badge tone={isFree ? 'attention' : 'success'}>{plan}</Badge>
                                 <Text variant="bodySm">{scanCount} scans run</Text>
+                                {plan === 'PRO' && (
+                                     <Text variant="bodySm" tone={aiUsage >= 10 ? 'critical' : 'subdued'}>
+                                         {aiUsage}/10 AI analyses used
+                                     </Text>
+                                )}
                             </BlockStack>
                         </InlineGrid>
                     </Card>
@@ -294,7 +303,6 @@ function Dashboard() {
                                 )}
                             </BlockStack>
                          </Card>
-                         <Testimonials />
                      </BlockStack>
                 </Layout.Section>
             </>
