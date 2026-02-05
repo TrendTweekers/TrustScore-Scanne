@@ -28,6 +28,7 @@ const ensureProtocol = (url) => {
 
 // GET /api/dashboard
 router.get('/dashboard', async (req, res) => {
+  console.log("HIT /api/dashboard | shop:", req.query.shop || req.headers['x-shopify-shop-domain']);
   try {
     const session = res.locals.shopify.session;
     const history = await getScanHistory(session.shop);

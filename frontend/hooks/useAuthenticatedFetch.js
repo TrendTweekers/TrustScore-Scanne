@@ -5,6 +5,7 @@ import { Redirect } from '@shopify/app-bridge/actions';
 export function useAuthenticatedFetch() {
   const app = useAppBridge();
   return async (uri, options = {}) => {
+    console.log("Attempting to fetch:", uri);
     const token = await getSessionToken(app);
     const headers = {
       ...options.headers,

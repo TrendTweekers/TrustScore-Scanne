@@ -15,6 +15,8 @@ function Dashboard() {
   useEffect(() => {
     if (app) {
       console.log('App Bridge ready - checking embedded status');
+      // Test ping
+      fetch('/api/ping').then(r => r.json()).then(d => console.log("Ping success:", d)).catch(e => console.error("Ping failed:", e));
     }
   }, [app]);
   const [scanResult, setScanResult] = useState(null);
@@ -25,6 +27,7 @@ function Dashboard() {
 
   const loadDashboard = useCallback(async () => {
     try {
+      console.log("Attempting to fetch dashboard");
       const res = await fetch('/api/dashboard');
       const data = await res.json();
       setDashboardData(data);
@@ -34,7 +37,7 @@ function Dashboard() {
           setShowOnboarding(true);
       }
     } catch (err) {
-      console.error(err);
+      console.error("API fetch failed:", err);
     }
   }, [fetch]);
 

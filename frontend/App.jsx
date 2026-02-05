@@ -10,6 +10,8 @@ function App() {
     host: new URLSearchParams(window.location.search).get('host'),
     forceRedirect: true,
   };
+  
+  console.log("App Bridge config:", config);
 
   return (
     <Provider config={config}>
