@@ -40,7 +40,11 @@ sessionStorage.loadSession = async (id) => {
     console.log(`[Session] WRAPPER HIT: Loading session: ${id}`);
     try {
         const session = await originalLoadCallback.call(sessionStorage, id);
-        console.log(`[Session] Load result for ${id}:`, session ? `FOUND (Shop: ${session.shop})` : "NOT FOUND");
+        if (session) {
+            console.log(`[Session] FOUND: ID=${session.id} | Shop=${session.shop} | AccessToken=${session.accessToken ? "PRESENT" : "MISSING"} | Scope=${session.scope} | Online=${session.isOnline}`);
+        } else {
+            console.log(`[Session] NOT FOUND for ID: ${id}`);
+        }
         return session;
     } catch (err) {
         console.error(`[Session] Load FAILED for ${id}:`, err);
