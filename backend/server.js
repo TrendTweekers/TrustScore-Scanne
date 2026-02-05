@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import { shopifyApp } from '@shopify/shopify-app-express';
+import { SQLiteSessionStorage } from '@shopify/shopify-app-session-storage-sqlite';
 import { LATEST_API_VERSION, BillingInterval } from '@shopify/shopify-api';
-import { sessionCallback, createOrUpdateShop } from './db.js';
+import { createOrUpdateShop } from './db.js';
 import scannerRoutes from './routes/scanner.js';
 import serveStatic from 'serve-static';
 import { fileURLToPath } from 'url';
@@ -13,6 +14,7 @@ const __dirname = path.dirname(__filename);
 const FRONTEND_PATH = path.join(__dirname, '../dist');
 
 const PORT = process.env.PORT || 3000;
+const DB_PATH = process.env.DATABASE_URL || "./database.sqlite";
 
 // Billing Configuration
 export const BILLING_PLANS = {
@@ -45,11 +47,7 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
-  sessionStorage: {
-    storeSession: sessionCallback.storeCallback,
-    loadSession: sessionCallback.loadCallback,
-    deleteSession: sessionCallback.deleteCallback,
-  },
+  sessionStorage: new SQLiteSessionStorage(DB_PATH),
 });
 
 const app = express();
