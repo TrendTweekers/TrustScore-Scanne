@@ -68,7 +68,7 @@ if (sessionStorage instanceof RedisSessionStorage) {
 
 console.log("Shopify app config:", {
   apiKey: process.env.SHOPIFY_API_KEY ? "set" : "missing",
-  scopes: process.env.SCOPES || process.env.SHOPIFY_API_SCOPES || "read_products,read_themes,write_themes",
+  scopes: process.env.SCOPES || process.env.SHOPIFY_API_SCOPES || "read_products,read_themes",
   useOnlineTokens: false, 
   isEmbeddedApp: true,
   sessionStorageType: sessionStorage.constructor.name
