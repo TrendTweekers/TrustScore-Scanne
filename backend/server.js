@@ -54,6 +54,7 @@ const shopify = shopifyApp({
     path: '/api/webhooks',
   },
   sessionStorage,
+  isEmbeddedApp: true,
 });
 
 const app = express();
