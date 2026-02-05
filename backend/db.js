@@ -33,19 +33,36 @@ db.serialize(() => {
     FOREIGN KEY(shop) REFERENCES shops(shop)
   )`);
 
-  const migrations = [
-    "ALTER TABLE shops ADD COLUMN revenue_bracket TEXT",
-    "ALTER TABLE shops ADD COLUMN ai_usage_count INTEGER DEFAULT 0",
-    "ALTER TABLE shops ADD COLUMN ai_usage_reset_date DATETIME"
-  ];
+  // Robust migration to ensure columns exist
+  const ensureColumns = () => {
+    db.all("PRAGMA table_info(shops)", (err, columns) => {
+      if (err) {
+        console.error("Failed to get table info for shops:", err);
+        return;
+      }
 
-  migrations.forEach(query => {
-      db.run(query, (err) => {
-          if (err && !err.message.includes('duplicate column name')) {
-              console.error(`Migration error (${query}):`, err);
-          }
+      const existingColumns = columns.map(c => c.name);
+      const migrations = [
+        { name: 'revenue_bracket', query: "ALTER TABLE shops ADD COLUMN revenue_bracket TEXT" },
+        { name: 'ai_usage_count', query: "ALTER TABLE shops ADD COLUMN ai_usage_count INTEGER DEFAULT 0" },
+        { name: 'ai_usage_reset_date', query: "ALTER TABLE shops ADD COLUMN ai_usage_reset_date DATETIME" }
+      ];
+
+      migrations.forEach(migration => {
+        if (!existingColumns.includes(migration.name)) {
+          console.log(`Running migration: ${migration.query}`);
+          db.run(migration.query, (err) => {
+            if (err) console.error(`Migration failed for ${migration.name}:`, err);
+            else console.log(`Migration successful for ${migration.name}`);
+          });
+        } else {
+            // console.log(`Column ${migration.name} already exists.`);
+        }
       });
-  });
+    });
+  };
+  
+  ensureColumns();
 });
 
 const createOrUpdateShop = (shop, accessToken) => {

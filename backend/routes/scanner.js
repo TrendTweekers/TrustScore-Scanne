@@ -191,7 +191,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
     // 2. AI Qualitative Analysis (PRO/PLUS only)
     let aiAnalysis = null;
     let aiLimitReached = false;
-    const shopData = await getShop(session.shop);
+    const shopData = await getShop(session.shop) || {}; // Defensive: ensure object exists
 
     // Check reset date
     if (shopData.ai_usage_reset_date && new Date(shopData.ai_usage_reset_date) < new Date()) {
@@ -202,7 +202,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
     if (userPlan === 'PRO' || userPlan === 'PLUS') {
         if (userPlan === 'PRO' && (shopData.ai_usage_count || 0) >= 10) {
              aiLimitReached = true;
-             console.log(`AI limit reached for ${session.shop} (Pro: ${shopData.ai_usage_count}/10)`);
+             console.log(`AI limit reached for ${session.shop} (Pro: ${shopData.ai_usage_count || 0}/10)`);
         } else {
             try {
                 console.log('Running Claude AI Analysis...');
