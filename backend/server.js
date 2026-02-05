@@ -217,6 +217,16 @@ app.get(
         console.log("Session ID:", session.id);
         console.log("Expires:", session.expires);
         console.log("Attempted to store session in Redis for shop:", session.shop);
+        
+        // Explicitly save the session since auto-save seems to be failing
+        try {
+            console.log("[Manual Fix] Explicitly calling storeSession(session)...");
+            await sessionStorage.storeSession(session);
+            console.log("[Manual Fix] storeSession completed.");
+        } catch (err) {
+            console.error("[Manual Fix] storeSession FAILED:", err);
+        }
+
     } else {
         console.log("Session creation FAILED — no session object");
     }
