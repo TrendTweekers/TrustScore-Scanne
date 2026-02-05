@@ -1,0 +1,23 @@
+import React from 'react';
+import { AppProvider } from '@shopify/polaris';
+import { Provider } from '@shopify/app-bridge-react';
+import enTranslations from '@shopify/polaris/locales/en.json';
+import Dashboard from './components/Dashboard';
+
+function App() {
+  const config = {
+    apiKey: import.meta.env.VITE_SHOPIFY_API_KEY || 'REPLACE_WITH_API_KEY',
+    host: new URLSearchParams(window.location.search).get('host'),
+    forceRedirect: true,
+  };
+
+  return (
+    <Provider config={config}>
+      <AppProvider i18n={enTranslations}>
+        <Dashboard />
+      </AppProvider>
+    </Provider>
+  );
+}
+
+export default App;
