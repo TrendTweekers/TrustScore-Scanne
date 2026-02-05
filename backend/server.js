@@ -146,11 +146,22 @@ app.use('/api/*', (req, res, next) => {
 });
 
 // Set up Shopify authentication and webhook handling
-app.get(shopify.config.auth.path, shopify.auth.begin());
+app.get(
+  shopify.config.auth.path,
+  (req, res, next) => {
+    console.log("=== /api/auth ROUTE HIT ===");
+    console.log("Shop:", req.query.shop);
+    console.log("HOST env var:", process.env.HOST);
+    console.log("Request headers host:", req.get('host'));
+    console.log("Full request URL:", `${req.protocol}://${req.get('host')}${req.originalUrl}`);
+    next();
+  },
+  shopify.auth.begin()
+);
 app.get(
   shopify.config.auth.callbackPath,
   (req, res, next) => {
-    console.log("=== OAuth callback received ===");
+    console.log("=== /api/auth/callback HIT ===");
     console.log("Query params:", req.query);
     console.log("Shop:", req.query.shop);
     console.log("Code present:", !!req.query.code);
