@@ -149,6 +149,10 @@ const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
 console.log('Trust proxy set to 1');
 
+console.log("=== SERVER STARTING ===");
+console.log("Auth path:", shopify.config.auth.path);
+console.log("Callback path:", shopify.config.auth.callbackPath);
+
 // Debug: Ping route (unprotected)
 app.get('/api/ping', (req, res) => {
   console.log("Ping hit from:", req.get('origin') || 'unknown');
@@ -171,7 +175,8 @@ app.get('/api/session-status', (req, res) => {
 
 // MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/')) {
+  // DO NOT force header for auth routes!
+  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/auth')) {
     console.log(`Header middleware running on ${req.path}`);
     req.headers['x-requested-with'] = 'XMLHttpRequest';
     console.log(`Forced x-requested-with header on ${req.path} | from ${req.get('origin') || 'unknown'}`);
