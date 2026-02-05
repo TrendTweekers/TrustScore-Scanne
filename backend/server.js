@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { shopifyApp } from '@shopify/shopify-app-express';
+import { RedisSessionStorage } from "@shopify/shopify-app-session-storage-redis";
 import { SQLiteSessionStorage } from '@shopify/shopify-app-session-storage-sqlite';
 import { LATEST_API_VERSION, BillingInterval } from '@shopify/shopify-api';
 import { createOrUpdateShop } from './db.js';
@@ -47,7 +48,7 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
-  sessionStorage: new SQLiteSessionStorage(DB_PATH),
+  sessionStorage: sessionStorage,
 });
 
 const app = express();

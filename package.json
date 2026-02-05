@@ -17,6 +17,7 @@
     "@shopify/polaris": "^13.0.0",
     "@shopify/shopify-api": "^11.6.0",
     "@shopify/shopify-app-express": "^5.0.0",
+    "@shopify/shopify-app-session-storage-redis": "^5.0.5",
     "@shopify/shopify-app-session-storage-sqlite": "^5.0.5",
     "cors": "^2.8.6",
     "dotenv": "^16.4.0",
