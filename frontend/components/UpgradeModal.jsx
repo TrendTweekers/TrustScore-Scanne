@@ -8,7 +8,7 @@ export function UpgradeModal({ open, onClose, onUpgrade }) {
       onClose={onClose}
       title="Unlock Unlimited Scans"
       primaryAction={{
-        content: 'Upgrade to Pro ($19/mo)',
+        content: 'Upgrade to Pro ($29/mo)',
         onAction: () => onUpgrade('PRO'),
       }}
       secondaryActions={[
@@ -28,10 +28,10 @@ export function UpgradeModal({ open, onClose, onUpgrade }) {
             <Box padding="400" background="bg-surface-secondary" borderRadius="200">
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h3">Pro Plan</Text>
-                <Text variant="headingxl" as="p">$19<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
+                <Text variant="headingxl" as="p">$29<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
                 <List>
                     <List.Item>Unlimited Scans</List.Item>
-                    <List.Item>10 AI Analyses/mo</List.Item>
+                    <List.Item>Claude AI Analysis</List.Item>
                     <List.Item>Weekly Monitoring</List.Item>
                     <List.Item>Priority Support</List.Item>
                 </List>
@@ -42,11 +42,11 @@ export function UpgradeModal({ open, onClose, onUpgrade }) {
             <Box padding="400" background="bg-surface-secondary" borderRadius="200">
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h3">Plus Plan</Text>
-                <Text variant="headingxl" as="p">$49<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
+                <Text variant="headingxl" as="p">$99<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
                 <List>
                     <List.Item>Everything in Pro</List.Item>
-                    <List.Item>Unlimited AI Analysis</List.Item>
-                    <List.Item>Competitor Scans</List.Item>
+                    <List.Item>Custom Branding</List.Item>
+                    <List.Item>API Access</List.Item>
                     <List.Item>Dedicated Manager</List.Item>
                 </List>
                 <Button onClick={() => onUpgrade('PLUS')}>Choose Plus</Button>

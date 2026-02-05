@@ -77,13 +77,13 @@ console.log("Shopify app config:", {
 // Billing Configuration
 const BILLING_PLANS = {
   PRO: {
-    amount: 19.00,
+    amount: 29.00,
     currencyCode: 'USD',
     interval: BillingInterval.Every30Days,
     label: 'Pro Plan - Unlimited Scans + Weekly Monitoring',
   },
   PLUS: {
-    amount: 49.00,
+    amount: 99.00,
     currencyCode: 'USD',
     interval: BillingInterval.Every30Days,
     label: 'Plus Plan - Daily Monitoring + Competitor Scans',

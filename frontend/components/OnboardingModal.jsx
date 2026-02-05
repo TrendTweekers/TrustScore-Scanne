@@ -1,27 +1,11 @@
 import React, { useState } from 'react';
-import { Modal, TextContainer, Button, BlockStack, Text, List, Select } from '@shopify/polaris';
-import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
+import { Modal, TextContainer, Button, BlockStack, Text, List, Image } from '@shopify/polaris';
 
 export function OnboardingModal({ open, onClose, onStartScan }) {
-  const fetch = useAuthenticatedFetch();
   const [step, setStep] = useState(1);
-  const [revenue, setRevenue] = useState('');
 
-  const handleNext = async () => {
-    if (step === 2 && revenue) {
-        // Save revenue
-        try {
-            await fetch('/api/onboarding', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ revenue })
-            });
-        } catch (e) {
-            console.error("Failed to save revenue", e);
-        }
-    }
-
-    if (step < 4) {
+  const handleNext = () => {
+    if (step < 3) {
       setStep(step + 1);
     } else {
       onStartScan();
@@ -29,23 +13,14 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
     }
   };
 
-  const revenueOptions = [
-      {label: 'Select monthly revenue', value: ''},
-      {label: 'Less than $1,000', value: '<1k'},
-      {label: '$1,000 - $10,000', value: '1k-10k'},
-      {label: '$10,000 - $50,000', value: '10k-50k'},
-      {label: '$50,000+', value: '50k+'}
-  ];
-
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={step === 1 ? "Welcome to TrustScore!" : step === 2 ? "Customize Your Audit" : step === 3 ? "How it Works" : "Ready to Audit"}
+      title={step === 1 ? "Welcome to TrustScore!" : step === 2 ? "How it Works" : "Ready to Audit"}
       primaryAction={{
-        content: step === 4 ? 'Scan Store (60 seconds)' : 'Next',
+        content: step === 3 ? 'Run First Scan' : 'Next',
         onAction: handleNext,
-        disabled: step === 2 && !revenue
       }}
       secondaryActions={[
         {
@@ -58,9 +33,6 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
         <BlockStack gap="400">
           {step === 1 && (
             <TextContainer>
-              <Text as="h2" variant="headingMd">
-                Stores fixing trust signals see 15-30% conversion lifts
-              </Text>
               <Text as="p">
                 Hi there! 👋 Welcome to TrustScore Scanner. We're here to help you turn more visitors into buyers by fixing "trust issues" on your store.
               </Text>
@@ -71,18 +43,6 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
           )}
 
           {step === 2 && (
-             <BlockStack gap="400">
-                 <Text as="p">To give you the best recommendations, what is your current monthly revenue?</Text>
-                 <Select
-                    label="Monthly Revenue"
-                    options={revenueOptions}
-                    onChange={setRevenue}
-                    value={revenue}
-                 />
-             </BlockStack>
-          )}
-
-          {step === 3 && (
             <TextContainer>
               <Text as="h3">We check 20+ Trust Signals</Text>
               <List type="bullet">
@@ -94,10 +54,10 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
             </TextContainer>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <TextContainer>
               <Text as="p">
-                We're ready to run your first audit. This will take about 60 seconds.
+                We're ready to run your first audit. This will take about 10-20 seconds.
               </Text>
               <Text as="p">
                 You'll get a score from 0-100 and a list of actionable fixes.

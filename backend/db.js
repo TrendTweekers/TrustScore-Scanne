@@ -10,24 +10,8 @@ db.serialize(() => {
     shop TEXT PRIMARY KEY,
     accessToken TEXT,
     plan TEXT DEFAULT 'FREE',
-    isActive BOOLEAN DEFAULT 1,
-    revenue_bracket TEXT,
-    ai_usage_count INTEGER DEFAULT 0,
-    ai_usage_reset_date DATETIME
+    isActive BOOLEAN DEFAULT 1
   )`);
-
-  // Migration for existing tables
-  const columnsToAdd = [
-      { name: 'revenue_bracket', type: 'TEXT' },
-      { name: 'ai_usage_count', type: 'INTEGER DEFAULT 0' },
-      { name: 'ai_usage_reset_date', type: 'DATETIME' }
-  ];
-
-  columnsToAdd.forEach(col => {
-      db.run(`ALTER TABLE shops ADD COLUMN ${col.name} ${col.type}`, (err) => {
-          // Ignore error if column exists
-      });
-  });
 
   db.run(`CREATE TABLE IF NOT EXISTS scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,35 +129,6 @@ const updateShopPlan = (shop, plan) => {
   });
 };
 
-const updateShopRevenue = (shop, revenue) => {
-  return new Promise((resolve, reject) => {
-    db.run(`UPDATE shops SET revenue_bracket = ? WHERE shop = ?`, [revenue, shop], function(err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
-};
-
-const incrementAIUsage = (shop) => {
-    return new Promise((resolve, reject) => {
-        db.run(`UPDATE shops SET ai_usage_count = COALESCE(ai_usage_count, 0) + 1 WHERE shop = ?`, [shop], function(err) {
-             if (err) reject(err);
-             else resolve(this);
-        });
-    });
-};
-
-const resetAIUsage = (shop) => {
-    return new Promise((resolve, reject) => {
-        const nextReset = new Date();
-        nextReset.setMonth(nextReset.getMonth() + 1);
-        db.run(`UPDATE shops SET ai_usage_count = 0, ai_usage_reset_date = ? WHERE shop = ?`, [nextReset.toISOString(), shop], function(err) {
-             if (err) reject(err);
-             else resolve(this);
-        });
-    });
-};
-
 module.exports = {
   createOrUpdateShop,
   getShop,
@@ -184,8 +139,5 @@ module.exports = {
   getScanCount,
   getCompetitorScans,
   getCompetitorScanCount,
-  updateShopPlan,
-  updateShopRevenue,
-  incrementAIUsage,
-  resetAIUsage
+  updateShopPlan
 };
