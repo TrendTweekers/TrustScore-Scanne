@@ -29,6 +29,7 @@ export function useAuthenticatedFetch() {
         const location = response.headers.get('Location');
         if (location) {
             const host = import.meta.env.VITE_HOST || 'https://trustscore-scanne-production.up.railway.app';
+            console.log("Debug: VITE_HOST =", import.meta.env.VITE_HOST, "Calculated Host =", host);
             const fullUrl = location.startsWith('/') ? `${host}${location}` : location;
             console.log('302 redirect detected - forcing top redirect to:', fullUrl);
             window.top.location.href = fullUrl;

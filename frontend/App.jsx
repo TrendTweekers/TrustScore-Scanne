@@ -12,6 +12,7 @@ function App() {
   };
   
   console.log("App Bridge config:", config);
+  console.log("Environment: VITE_HOST =", import.meta.env.VITE_HOST);
 
   return (
     <AppBridgeProvider config={config}>
