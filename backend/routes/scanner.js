@@ -1,7 +1,7 @@
 const express = require('express');
 const { takeScreenshots } = require('../services/puppeteer.js');
 const { calculateTrustScore } = require('../services/scoring.js');
-const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount } = require('../db.js');
+const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount, updateShopRevenue, incrementAIUsage, resetAIUsage } = require('../db.js');
 const { analyzeStoreWithClaude } = require('../services/claude.js');
 const { sendScoreDropAlert } = require('../services/email.js');
 const { checkBillingMiddleware } = require('../middleware/billing.js');
@@ -15,6 +15,23 @@ const ensureProtocol = (url) => {
   }
   return url;
 };
+
+// POST /api/onboarding
+router.post('/onboarding', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        const { revenue } = req.body;
+        if (revenue) {
+            await updateShopRevenue(session.shop, revenue);
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Revenue is required' });
+        }
+    } catch (error) {
+        console.error('Onboarding error:', error);
+        res.status(500).json({ error: 'Failed to save onboarding data' });
+    }
+});
 
 // GET /api/scans/history
 router.get('/scans/history', async (req, res) => {
@@ -146,7 +163,8 @@ router.get('/dashboard', async (req, res) => {
       currentScore,
       trend,
       history: history.slice(0, 5), // Return last 5 scans for dashboard
-      scanCount: history.length
+      scanCount: history.length,
+      aiUsage: shopData?.ai_usage_count || 0
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -172,13 +190,27 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
 
     // 2. AI Qualitative Analysis (PRO/PLUS only)
     let aiAnalysis = null;
+    let aiLimitReached = false;
+    const shopData = await getShop(session.shop);
+
+    // Check reset date
+    if (shopData.ai_usage_reset_date && new Date(shopData.ai_usage_reset_date) < new Date()) {
+        await resetAIUsage(session.shop);
+        shopData.ai_usage_count = 0; 
+    }
+
     if (userPlan === 'PRO' || userPlan === 'PLUS') {
-        try {
-            console.log('Running Claude AI Analysis...');
-            // Pass homepage screenshot primarily
-            aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
-        } catch (aiError) {
-            console.error('AI Analysis failed:', aiError);
+        if (userPlan === 'PRO' && (shopData.ai_usage_count || 0) >= 10) {
+             aiLimitReached = true;
+             console.log(`AI limit reached for ${session.shop} (Pro: ${shopData.ai_usage_count}/10)`);
+        } else {
+            try {
+                console.log('Running Claude AI Analysis...');
+                aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
+                await incrementAIUsage(session.shop);
+            } catch (aiError) {
+                console.error('AI Analysis failed:', aiError);
+            }
         }
     }
 

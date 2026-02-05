@@ -32,6 +32,20 @@ db.serialize(() => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(shop) REFERENCES shops(shop)
   )`);
+
+  const migrations = [
+    "ALTER TABLE shops ADD COLUMN revenue_bracket TEXT",
+    "ALTER TABLE shops ADD COLUMN ai_usage_count INTEGER DEFAULT 0",
+    "ALTER TABLE shops ADD COLUMN ai_usage_reset_date DATETIME"
+  ];
+
+  migrations.forEach(query => {
+      db.run(query, (err) => {
+          if (err && !err.message.includes('duplicate column name')) {
+              console.error(`Migration error (${query}):`, err);
+          }
+      });
+  });
 });
 
 const createOrUpdateShop = (shop, accessToken) => {
@@ -129,6 +143,38 @@ const updateShopPlan = (shop, plan) => {
   });
 };
 
+const updateShopRevenue = (shop, revenue) => {
+  return new Promise((resolve, reject) => {
+    db.run(`UPDATE shops SET revenue_bracket = ? WHERE shop = ?`, [revenue, shop], function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+};
+
+const incrementAIUsage = (shop) => {
+    return new Promise((resolve, reject) => {
+        db.run(`UPDATE shops SET ai_usage_count = COALESCE(ai_usage_count, 0) + 1 WHERE shop = ?`, [shop], function(err) {
+             if (err) reject(err);
+             else resolve(this);
+        });
+    });
+};
+
+const resetAIUsage = (shop) => {
+    return new Promise((resolve, reject) => {
+        // Set reset date to 30 days from now
+        const nextReset = new Date();
+        nextReset.setDate(nextReset.getDate() + 30);
+        
+        db.run(`UPDATE shops SET ai_usage_count = 0, ai_usage_reset_date = ? WHERE shop = ?`, 
+            [nextReset.toISOString(), shop], function(err) {
+             if (err) reject(err);
+             else resolve(this);
+        });
+    });
+};
+
 module.exports = {
   createOrUpdateShop,
   getShop,
@@ -139,5 +185,8 @@ module.exports = {
   getScanCount,
   getCompetitorScans,
   getCompetitorScanCount,
-  updateShopPlan
+  updateShopPlan,
+  updateShopRevenue,
+  incrementAIUsage,
+  resetAIUsage
 };

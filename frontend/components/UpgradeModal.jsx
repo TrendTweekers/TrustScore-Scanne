@@ -2,56 +2,64 @@ import React from 'react';
 import { Modal, Text, BlockStack, Button, InlineGrid, Box, Card, List } from '@shopify/polaris';
 
 export function UpgradeModal({ open, onClose, onUpgrade }) {
+  const plans = [
+    {
+      name: 'Pro',
+      price: '$19',
+      features: [
+        'Unlimited Scans',
+        '10 AI Analyses/mo',
+        'Weekly Monitoring',
+        'Priority Support'
+      ],
+      action: () => onUpgrade('PRO')
+    },
+    {
+      name: 'Plus',
+      price: '$49',
+      features: [
+        'Daily Monitoring',
+        'Competitor Analysis',
+        'Unlimited AI Analysis',
+        'Dedicated Success Manager'
+      ],
+      action: () => onUpgrade('PLUS')
+    }
+  ];
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Unlock Unlimited Scans"
-      primaryAction={{
-        content: 'Upgrade to Pro ($29/mo)',
-        onAction: () => onUpgrade('PRO'),
-      }}
+      title="Upgrade Your Plan"
       secondaryActions={[
         {
-          content: 'Close',
+          content: 'Cancel',
           onAction: onClose,
         },
       ]}
     >
       <Modal.Section>
-        <BlockStack gap="500">
+        <BlockStack gap="400">
           <Text as="p">
-            You've used your free scan. Upgrade to Pro to unlock unlimited scans, weekly monitoring, and advanced AI analysis.
+            Unlock the full potential of TrustScore Scanner with our premium plans.
           </Text>
-
-          <InlineGrid columns={2} gap="400">
-            <Box padding="400" background="bg-surface-secondary" borderRadius="200">
-              <BlockStack gap="400">
-                <Text variant="headingMd" as="h3">Pro Plan</Text>
-                <Text variant="headingxl" as="p">$29<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
-                <List>
-                    <List.Item>Unlimited Scans</List.Item>
-                    <List.Item>Claude AI Analysis</List.Item>
-                    <List.Item>Weekly Monitoring</List.Item>
-                    <List.Item>Priority Support</List.Item>
-                </List>
-                <Button variant="primary" onClick={() => onUpgrade('PRO')}>Choose Pro</Button>
-              </BlockStack>
-            </Box>
             
-            <Box padding="400" background="bg-surface-secondary" borderRadius="200">
-              <BlockStack gap="400">
-                <Text variant="headingMd" as="h3">Plus Plan</Text>
-                <Text variant="headingxl" as="p">$99<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
-                <List>
-                    <List.Item>Everything in Pro</List.Item>
-                    <List.Item>Custom Branding</List.Item>
-                    <List.Item>API Access</List.Item>
-                    <List.Item>Dedicated Manager</List.Item>
-                </List>
-                <Button onClick={() => onUpgrade('PLUS')}>Choose Plus</Button>
-              </BlockStack>
-            </Box>
+          <InlineGrid columns={2} gap="400">
+            {plans.map((plan) => (
+              <Card key={plan.name}>
+                <BlockStack gap="400">
+                  <Text variant="headingLg" as="h3">{plan.name}</Text>
+                  <Text variant="headingxl" as="p">{plan.price}<Text tone="subdued" as="span" variant="bodySm">/mo</Text></Text>
+                  <List>
+                    {plan.features.map(feature => (
+                      <List.Item key={feature}>{feature}</List.Item>
+                    ))}
+                  </List>
+                  <Button variant="primary" onClick={plan.action} fullWidth>Upgrade to {plan.name}</Button>
+                </BlockStack>
+              </Card>
+            ))}
           </InlineGrid>
         </BlockStack>
       </Modal.Section>
