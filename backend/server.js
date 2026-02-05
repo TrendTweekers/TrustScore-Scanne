@@ -21,26 +21,40 @@ const sessionStorage =
 
 // Logging wrapper for sessionStorage
 const originalStoreCallback = sessionStorage.storeSession;
+console.log("[Setup] Wrapping storeSession. Original type:", typeof originalStoreCallback);
+
 sessionStorage.storeSession = async (session) => {
-    console.log(`[Session] Storing session: ${session.id} | Shop: ${session.shop} | Expires: ${session.expires}`);
-    const result = await originalStoreCallback.call(sessionStorage, session);
-    console.log(`[Session] Store result for ${session.id}:`, result ? "SUCCESS" : "FAILED/UNDEFINED");
-    return result;
+    console.log(`[Session] WRAPPER HIT: Storing session: ${session.id} | Shop: ${session.shop} | Expires: ${session.expires}`);
+    try {
+        const result = await originalStoreCallback.call(sessionStorage, session);
+        console.log(`[Session] Store result for ${session.id}:`, result ? "SUCCESS" : "FAILED/UNDEFINED");
+        return result;
+    } catch (err) {
+        console.error(`[Session] Store FAILED for ${session.id}:`, err);
+        throw err;
+    }
 };
 
 const originalLoadCallback = sessionStorage.loadSession;
 sessionStorage.loadSession = async (id) => {
-    console.log(`[Session] Loading session: ${id}`);
-    const session = await originalLoadCallback.call(sessionStorage, id);
-    console.log(`[Session] Load result for ${id}:`, session ? `FOUND (Shop: ${session.shop})` : "NOT FOUND");
-    return session;
+    console.log(`[Session] WRAPPER HIT: Loading session: ${id}`);
+    try {
+        const session = await originalLoadCallback.call(sessionStorage, id);
+        console.log(`[Session] Load result for ${id}:`, session ? `FOUND (Shop: ${session.shop})` : "NOT FOUND");
+        return session;
+    } catch (err) {
+        console.error(`[Session] Load FAILED for ${id}:`, err);
+        throw err;
+    }
 };
 
 const originalDeleteCallback = sessionStorage.deleteSession;
 sessionStorage.deleteSession = async (id) => {
-    console.log(`[Session] Deleting session: ${id}`);
+    console.log(`[Session] WRAPPER HIT: Deleting session: ${id}`);
     return await originalDeleteCallback.call(sessionStorage, id);
 };
+
+console.log("[Setup] Session storage wrappers applied");
 
 if (sessionStorage instanceof RedisSessionStorage) {
   console.log("Using Redis Session Storage - REDIS_URL:", process.env.REDIS_URL ? "set" : "MISSING");
@@ -52,7 +66,8 @@ console.log("Shopify app config:", {
   apiKey: process.env.SHOPIFY_API_KEY ? "set" : "missing",
   scopes: process.env.SCOPES || process.env.SHOPIFY_API_SCOPES || "read_products,read_themes,write_themes",
   useOnlineTokens: false, 
-  isEmbeddedApp: true
+  isEmbeddedApp: true,
+  sessionStorageType: sessionStorage.constructor.name
 });
 
 // Billing Configuration
