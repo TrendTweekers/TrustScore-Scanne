@@ -80,6 +80,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Fallback: Ensure shop domain header is present for Shopify middleware
+app.use('/api/*', (req, res, next) => {
+  if (!req.headers['x-shopify-shop-domain']) {
+    req.headers['x-shopify-shop-domain'] = req.query.shop || req.headers['x-shopify-shop-domain'];
+  }
+  next();
+});
+
 // Set up Shopify authentication and webhook handling
 app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
@@ -101,6 +109,16 @@ app.post(
 
 // All /api/* requests (except auth/webhooks) must be authenticated
 app.use(['/api', '/api/*'], shopify.validateAuthenticatedSession());
+
+// Log session status after validation
+app.use('/api/*', (req, res, next) => {
+  if (res.locals.shopify?.session) {
+    console.log('Valid session found | shop:', res.locals.shopify.session.shop);
+  } else {
+    console.log('No session found in request context');
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(shopify.cspHeaders()); // Ensure CSP headers are set

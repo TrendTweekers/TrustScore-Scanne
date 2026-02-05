@@ -8,8 +8,15 @@ import { Testimonials } from './Testimonials';
 import { FAQ } from './FAQ';
 
 function Dashboard() {
+  const app = useAppBridge();
   const fetch = useAuthenticatedFetch();
   const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+    if (app) {
+      console.log('App Bridge ready - checking embedded status');
+    }
+  }, [app]);
   const [scanResult, setScanResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanError, setScanError] = useState(null);
