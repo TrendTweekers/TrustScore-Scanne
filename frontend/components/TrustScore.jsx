@@ -185,7 +185,7 @@ function TrustScore({ result }) {
                     <Banner key={index} tone={getPriorityColor(rec.priority)}>
                       <BlockStack gap="200">
                         <Text fontWeight="bold" as="h3">
-                          [{rec.priority.toUpperCase()}] {rec.issue}
+                          [{rec.priority ? rec.priority.toUpperCase() : 'MEDIUM'}] {rec.issue}
                         </Text>
                         <InlineGrid columns={3} gap="400">
                            <Text tone="subdued">Impact: <Text as="span" fontWeight="bold">{rec.impact}</Text></Text>
