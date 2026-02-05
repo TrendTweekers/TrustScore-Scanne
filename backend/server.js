@@ -81,7 +81,7 @@ app.post(
 // All /api/* requests (except auth/webhooks) must be authenticated
 app.use('/api/*', (req, res, next) => {
   // Force Shopify to treat this as an API request to avoid redirects
-  req.headers['check-iframe'] = '1'; 
+  req.headers['x-requested-with'] = 'XMLHttpRequest';
   next();
 }, shopify.validateAuthenticatedSession());
 
