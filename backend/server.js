@@ -55,14 +55,28 @@ const shopify = shopifyApp({
   },
   sessionStorage,
   isEmbeddedApp: true,
+  session: {
+    cookie: {
+      secure: true,
+      sameSite: 'none',
+      httpOnly: true,
+      maxAge: 86400000, // 1 day
+      path: '/'
+    }
+  }
 });
+console.log('Session cookie configured with SameSite=none; Secure');
 
 const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
+console.log('Trust proxy set to 1');
 
 // MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
-app.use(['/api', '/api/*'], (req, res, next) => {
-  req.headers['x-requested-with'] = 'XMLHttpRequest';
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    req.headers['x-requested-with'] = 'XMLHttpRequest';
+    console.log(`Forced x-requested-with header on ${req.path} | from ${req.get('origin') || 'unknown'}`);
+  }
   next();
 });
 

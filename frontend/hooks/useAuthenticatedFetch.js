@@ -13,20 +13,21 @@ export function useAuthenticatedFetch() {
     const response = await fetch(uri, { ...options, headers });
     
     if (response.status === 403) {
-      const reauthHeader = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize");
-      if (reauthHeader === "1") {
-        const reauthUrl = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
-        if (reauthUrl) {
-          const redirect = Redirect.create(app);
-          redirect.dispatch(Redirect.Action.REMOTE, reauthUrl);
-          return Promise.reject(new Error('Reauth triggered'));
+      const reauth = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize");
+      if (reauth === "1") {
+        const url = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
+        console.log('Detected reauth needed, redirecting to:', url);
+        if (url && app) {
+          const redirectAction = Redirect.create(app);
+          redirectAction.dispatch(Redirect.Action.REMOTE, url);
         }
+        return Promise.reject(new Error('Reauth required'));
       }
-      throw new Error('Forbidden - session invalid');
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      console.error('API error:', response.status);
+      throw new Error(`HTTP error ${response.status}`);
     }
 
     return response;
