@@ -20,17 +20,7 @@ const sessionStorage =
     : new SQLiteSessionStorage(DB_PATH);
 
 if (sessionStorage instanceof RedisSessionStorage) {
-  console.log("Using Redis Session Storage");
-  // Check if we can access the client
-  if (sessionStorage.client) {
-      sessionStorage.client.ping().then(() => {
-        console.log("Redis connection OK");
-      }).catch(err => {
-        console.error("Redis connection FAILED:", err);
-      });
-  } else {
-      console.log("Redis client not directly accessible on sessionStorage object for ping check.");
-  }
+  console.log("Using Redis Session Storage - REDIS_URL:", process.env.REDIS_URL ? "set" : "MISSING");
 } else {
     console.log("Using SQLite Session Storage");
 }
