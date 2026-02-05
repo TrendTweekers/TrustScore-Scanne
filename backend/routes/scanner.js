@@ -1,9 +1,10 @@
 const express = require('express');
 const { takeScreenshots } = require('../services/puppeteer.js');
 const { calculateTrustScore } = require('../services/scoring.js');
-const { getShop, getScanCount, saveScan, getScanHistory } = require('../db.js');
+const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount } = require('../db.js');
 const { analyzeStoreWithClaude } = require('../services/claude.js');
 const { sendScoreDropAlert } = require('../services/email.js');
+const { checkBillingMiddleware } = require('../middleware/billing.js');
 
 const router = express.Router();
 
@@ -14,6 +15,110 @@ const ensureProtocol = (url) => {
   }
   return url;
 };
+
+// GET /api/scans/history
+router.get('/scans/history', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        const history = await getScansForChart(session.shop, 30);
+        res.json(history);
+    } catch (error) {
+        console.error('Chart history error:', error);
+        res.status(500).json({ error: 'Failed to load chart history' });
+    }
+});
+
+// POST /api/scanner/external
+router.post('/scanner/external', checkBillingMiddleware, async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        const { url } = req.body;
+        const userPlan = req.userPlan || 'FREE';
+        
+        // 1. Enforce Plan Limits
+        // Only PRO and PLUS can access this (enforced by middleware + check here)
+        if (userPlan === 'FREE') {
+             return res.status(403).json({ 
+                 error: 'Upgrade required', 
+                 message: 'Competitor scanning is a Pro feature.' 
+             });
+        }
+
+        const limit = userPlan === 'PRO' ? 5 : 20;
+        const currentCount = await getCompetitorScanCount(session.shop);
+
+        if (currentCount >= limit) {
+             return res.status(403).json({ 
+                 error: 'Limit reached', 
+                 message: `You have reached your limit of ${limit} competitor scans.` 
+             });
+        }
+
+        // 2. Validate URL
+        if (!url) {
+            return res.status(400).json({ error: 'URL is required' });
+        }
+        
+        const targetUrl = ensureProtocol(url);
+        
+        // Simple validation: must be reachable
+        // In a real app, we might check for Shopify specific headers or meta tags
+        // For now, we'll let Puppeteer fail if it's not reachable
+        
+        console.log(`Starting competitor scan for ${session.shop} -> ${targetUrl}`);
+
+        // 3. Run Analysis
+        const puppeteerResult = await takeScreenshots(targetUrl);
+        
+        // Competitor analysis always includes AI for deeper insights if plan allows, 
+        // but let's stick to the same logic: Pro/Plus gets AI.
+        // Since this is a Pro/Plus feature only, we ALWAYS run AI.
+        let aiAnalysis = null;
+        try {
+            console.log('Running Claude AI Analysis for competitor...');
+            aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
+        } catch (aiError) {
+            console.error('AI Analysis failed:', aiError);
+        }
+
+        const scoreResult = calculateTrustScore({ ...puppeteerResult, aiAnalysis });
+        const finalScore = scoreResult.homepage ? scoreResult.homepage.score : scoreResult.score;
+
+        // 4. Save to DB
+        await saveCompetitorScan(session.shop, targetUrl, finalScore, {
+            url: targetUrl,
+            ...scoreResult,
+            aiAnalysis,
+            screenshots: puppeteerResult.screenshots
+        });
+
+        res.json({
+            url: targetUrl,
+            score: finalScore,
+            result: {
+                ...scoreResult,
+                aiAnalysis
+            },
+            screenshots: puppeteerResult.screenshots
+        });
+
+    } catch (error) {
+        console.error('Competitor scan failed:', error);
+        res.status(500).json({ error: 'Competitor scan failed' });
+    }
+});
+
+// GET /api/competitors
+router.get('/competitors', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        const scans = await getCompetitorScans(session.shop);
+        res.json(scans);
+    } catch (error) {
+        console.error('Failed to fetch competitor scans:', error);
+        res.status(500).json({ error: 'Failed to fetch competitor scans' });
+    }
+});
 
 // GET /api/dashboard
 router.get('/dashboard', async (req, res) => {
@@ -50,28 +155,13 @@ router.get('/dashboard', async (req, res) => {
 });
 
 // POST /api/scan
-router.post('/scan', async (req, res) => {
+router.post('/scan', checkBillingMiddleware, async (req, res) => {
   try {
     const session = res.locals.shopify.session;
     const { url } = req.body;
     
-    // Get shop data to check plan limits
-    const shopData = await getShop(session.shop);
-    const scanCount = await getScanCount(session.shop);
-    
-    // Check Limits
-    // Free: 1 scan total (or maybe 1 per month? prompt says "Free: 1 scan")
-    // Pro/Plus: Unlimited
-    if (shopData?.plan === 'FREE' && scanCount >= 1) {
-       // Allow re-scanning if it's the same URL? Usually "1 scan" means 1 audit. 
-       // But for testing purposes, maybe we allow it. 
-       // The prompt says "Free: 1 scan". Strict interpretation.
-       return res.status(403).json({ 
-         error: 'Free limit reached', 
-         requiresUpgrade: true,
-         message: 'You have used your free scan. Upgrade to Pro for unlimited scans.' 
-       });
-    }
+    // Plan is attached by middleware
+    const userPlan = req.userPlan || 'FREE';
 
     const targetUrl = url ? ensureProtocol(url) : `https://${session.shop}`;
 
@@ -82,7 +172,7 @@ router.post('/scan', async (req, res) => {
 
     // 2. AI Qualitative Analysis (PRO/PLUS only)
     let aiAnalysis = null;
-    if (shopData?.plan === 'PRO' || shopData?.plan === 'PLUS') {
+    if (userPlan === 'PRO' || userPlan === 'PLUS') {
         try {
             console.log('Running Claude AI Analysis...');
             // Pass homepage screenshot primarily

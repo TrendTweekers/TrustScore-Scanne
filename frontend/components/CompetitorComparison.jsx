@@ -1,0 +1,189 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Text, TextField, Button, BlockStack, InlineGrid, Banner, List, Box, ProgressBar, Divider, Spinner } from '@shopify/polaris';
+import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
+
+export function CompetitorComparison({ userPlan, myLatestScore }) {
+  const fetch = useAuthenticatedFetch();
+  const [url, setUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [scans, setScans] = useState([]);
+  const [selectedScan, setSelectedScan] = useState(null);
+
+  const limit = userPlan === 'PRO' ? 5 : 20;
+  
+  const loadScans = useCallback(async () => {
+    try {
+      const res = await fetch('/api/competitors');
+      const data = await res.json();
+      setScans(data);
+      if (data.length > 0 && !selectedScan) {
+          setSelectedScan(data[0]);
+      }
+    } catch (err) {
+      console.error("Failed to load competitor scans", err);
+    }
+  }, [fetch, selectedScan]);
+
+  useEffect(() => {
+    loadScans();
+  }, [loadScans]);
+
+  const handleScan = async () => {
+    if (!url) return;
+    
+    setLoading(true);
+    setError(null);
+    setSelectedScan(null);
+
+    try {
+        const res = await fetch('/api/scanner/external', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            throw new Error(data.message || data.error || 'Scan failed');
+        }
+
+        // Add to list and select it
+        setScans([data, ...scans]);
+        setSelectedScan(data);
+        setUrl('');
+    } catch (err) {
+        setError(err.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  if (userPlan === 'FREE') {
+      return (
+          <Card>
+              <BlockStack gap="400">
+                  <Text variant="headingMd">Competitor Analysis</Text>
+                  <Banner tone="info" title="Pro Feature">
+                      Upgrade to Pro to scan competitor stores and see how you stack up.
+                  </Banner>
+              </BlockStack>
+          </Card>
+      );
+  }
+
+  return (
+    <BlockStack gap="500">
+        <Card>
+            <BlockStack gap="400">
+                <Text variant="headingMd">Competitor Analysis</Text>
+                <Text as="p">
+                    Compare your trust score against any competitor. 
+                    <Text as="span" tone="subdued"> ({scans.length}/{limit} scans used)</Text>
+                </Text>
+
+                <InlineGrid columns={['twoThirds', 'oneThird']} gap="400" alignItems="end">
+                    <TextField 
+                        label="Competitor URL" 
+                        value={url} 
+                        onChange={setUrl} 
+                        placeholder="https://competitor-store.com" 
+                        autoComplete="off"
+                        disabled={loading || scans.length >= limit}
+                    />
+                    <Button 
+                        variant="primary" 
+                        onClick={handleScan} 
+                        loading={loading}
+                        disabled={!url || loading || scans.length >= limit}
+                    >
+                        Scan Competitor
+                    </Button>
+                </InlineGrid>
+
+                {error && (
+                    <Banner tone="critical">{error}</Banner>
+                )}
+            </BlockStack>
+        </Card>
+
+        {loading && (
+             <Card>
+                 <BlockStack gap="400" align="center">
+                     <Spinner size="large" />
+                     <Text>Analyzing competitor store...</Text>
+                 </BlockStack>
+             </Card>
+        )}
+
+        {selectedScan && !loading && (
+            <Card>
+                <BlockStack gap="500">
+                    <Text variant="headingLg" as="h3">Comparison Result</Text>
+                    
+                    <InlineGrid columns={2} gap="800">
+                        {/* My Store */}
+                        <BlockStack gap="400">
+                            <Text variant="headingMd">Your Store</Text>
+                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                <BlockStack gap="200" align="center">
+                                    <Text variant="heading3xl">{myLatestScore}/100</Text>
+                                    <ProgressBar progress={myLatestScore} size="small" tone={myLatestScore > 80 ? 'success' : 'warning'} />
+                                </BlockStack>
+                            </Box>
+                        </BlockStack>
+
+                        {/* Competitor Store */}
+                        <BlockStack gap="400">
+                            <Text variant="headingMd">Competitor</Text>
+                            <Text tone="subdued" variant="bodySm">{selectedScan.url || selectedScan.competitor_url}</Text>
+                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                <BlockStack gap="200" align="center">
+                                    <Text variant="heading3xl">{selectedScan.score}/100</Text>
+                                    <ProgressBar progress={selectedScan.score} size="small" tone={selectedScan.score > 80 ? 'success' : 'warning'} />
+                                </BlockStack>
+                            </Box>
+                        </BlockStack>
+                    </InlineGrid>
+                    
+                    <Divider />
+
+                    <BlockStack gap="400">
+                        <Text variant="headingMd">Competitor Insights</Text>
+                        {selectedScan.result && JSON.parse(selectedScan.result).aiAnalysis ? (
+                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                <BlockStack gap="200">
+                                    <Text fontWeight="bold">AI Assessment</Text>
+                                    <Text>{JSON.parse(selectedScan.result).aiAnalysis.assessment}</Text>
+                                </BlockStack>
+                            </Box>
+                        ) : (
+                            <Text tone="subdued">No detailed AI insights available for this scan.</Text>
+                        )}
+                    </BlockStack>
+                </BlockStack>
+            </Card>
+        )}
+
+        {scans.length > 0 && (
+            <Card>
+                <BlockStack gap="400">
+                    <Text variant="headingMd">Scan History</Text>
+                    <List>
+                        {scans.map((scan, i) => (
+                            <List.Item key={i}>
+                                <InlineGrid columns={3} gap="400" alignItems="center">
+                                    <Text fontWeight="bold">{scan.competitor_url || scan.url}</Text>
+                                    <Text tone={scan.score > 80 ? 'success' : 'warning'}>Score: {scan.score}/100</Text>
+                                    <Button variant="plain" onClick={() => setSelectedScan(scan)}>View Comparison</Button>
+                                </InlineGrid>
+                            </List.Item>
+                        ))}
+                    </List>
+                </BlockStack>
+            </Card>
+        )}
+    </BlockStack>
+  );
+}

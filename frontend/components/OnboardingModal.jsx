@@ -22,6 +22,12 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
         content: step === 3 ? 'Run First Scan' : 'Next',
         onAction: handleNext,
       }}
+      secondaryActions={[
+        {
+          content: 'Close',
+          onAction: onClose,
+        }
+      ]}
     >
       <Modal.Section>
         <BlockStack gap="400">

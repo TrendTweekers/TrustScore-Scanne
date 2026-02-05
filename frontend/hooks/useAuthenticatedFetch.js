@@ -1,11 +1,12 @@
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { getSessionToken } from '@shopify/app-bridge-utils';
 import { Redirect } from '@shopify/app-bridge/actions';
+import { useCallback } from 'react';
 
 export function useAuthenticatedFetch() {
   const app = useAppBridge();
-  return async (uri, options = {}) => {
-    console.log("Attempting to fetch:", uri);
+  return useCallback(async (uri, options = {}) => {
+    // console.log("Attempting to fetch:", uri);
     const token = await getSessionToken(app);
     const headers = {
       ...options.headers,
@@ -45,5 +46,5 @@ export function useAuthenticatedFetch() {
     }
 
     return response;
-  };
+  }, [app]);
 }

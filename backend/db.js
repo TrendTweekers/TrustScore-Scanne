@@ -22,6 +22,16 @@ db.serialize(() => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(shop) REFERENCES shops(shop)
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS competitor_scans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shop TEXT,
+    competitor_url TEXT,
+    score INTEGER,
+    result TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(shop) REFERENCES shops(shop)
+  )`);
 });
 
 const createOrUpdateShop = (shop, accessToken) => {
@@ -55,6 +65,16 @@ const saveScan = (shop, url, score, result) => {
   });
 };
 
+const saveCompetitorScan = (shop, url, score, result) => {
+  return new Promise((resolve, reject) => {
+    db.run(`INSERT INTO competitor_scans (shop, competitor_url, score, result) VALUES (?, ?, ?, ?)`, 
+      [shop, url, score, JSON.stringify(result)], function(err) {
+      if (err) reject(err);
+      else resolve(this.lastID);
+    });
+  });
+};
+
 const getScanHistory = (shop) => {
   return new Promise((resolve, reject) => {
     db.all(`SELECT * FROM scans WHERE shop = ? ORDER BY timestamp DESC LIMIT 10`, [shop], (err, rows) => {
@@ -64,9 +84,36 @@ const getScanHistory = (shop) => {
   });
 };
 
+const getScansForChart = (shop, days = 30) => {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT score, timestamp FROM scans WHERE shop = ? AND timestamp >= datetime('now', '-${days} days') ORDER BY timestamp ASC`, [shop], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
 const getScanCount = (shop) => {
     return new Promise((resolve, reject) => {
         db.get(`SELECT COUNT(*) as count FROM scans WHERE shop = ?`, [shop], (err, row) => {
+            if (err) reject(err);
+            else resolve(row ? row.count : 0);
+        });
+    });
+};
+
+const getCompetitorScans = (shop) => {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM competitor_scans WHERE shop = ? ORDER BY timestamp DESC`, [shop], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+const getCompetitorScanCount = (shop) => {
+    return new Promise((resolve, reject) => {
+        db.get(`SELECT COUNT(*) as count FROM competitor_scans WHERE shop = ?`, [shop], (err, row) => {
             if (err) reject(err);
             else resolve(row ? row.count : 0);
         });
@@ -86,7 +133,11 @@ module.exports = {
   createOrUpdateShop,
   getShop,
   saveScan,
+  saveCompetitorScan,
   getScanHistory,
+  getScansForChart,
   getScanCount,
+  getCompetitorScans,
+  getCompetitorScanCount,
   updateShopPlan
 };

@@ -277,7 +277,7 @@ app.use((req, res, next) => {
 app.use('/api', scannerRoutes);
 
 // Billing Route
-app.get('/api/billing/upgrade', async (req, res) => {
+const handleBillingRequest = async (req, res) => {
   const { plan } = req.query;
   const session = res.locals.shopify.session;
   
@@ -285,16 +285,26 @@ app.get('/api/billing/upgrade', async (req, res) => {
     return res.status(400).json({ error: 'Invalid plan' });
   }
 
-  const confirmationUrl = await shopify.api.billing.request({
-    session,
-    plan: BILLING_PLANS[plan].label,
-    isTest: true, // TODO: Remove in production
-    ...BILLING_PLANS[plan],
-    returnUrl: `https://${shopify.config.api.hostName}/?shop=${session.shop}&billing=success`,
-  });
+  const isTest = process.env.NODE_ENV !== 'production';
 
-  res.json({ confirmationUrl });
-});
+  try {
+    const confirmationUrl = await shopify.api.billing.request({
+      session,
+      plan: BILLING_PLANS[plan].label,
+      isTest, 
+      ...BILLING_PLANS[plan],
+      returnUrl: `https://${shopify.config.api.hostName}/?shop=${session.shop}&billing=success`,
+    });
+
+    res.json({ confirmationUrl });
+  } catch (error) {
+    console.error('Billing request failed:', error);
+    res.status(500).json({ error: 'Failed to create billing request' });
+  }
+};
+
+app.get('/api/billing/upgrade', handleBillingRequest);
+app.get('/api/billing/subscribe', handleBillingRequest);
 
 // Serve frontend
 app.use(serveStatic(FRONTEND_PATH, { index: false }));
