@@ -19,8 +19,39 @@ const sessionStorage =
     ? new RedisSessionStorage(process.env.REDIS_URL)
     : new SQLiteSessionStorage(DB_PATH);
 
+// Logging wrapper for sessionStorage
+const originalStoreCallback = sessionStorage.storeSession;
+sessionStorage.storeSession = async (session) => {
+    console.log(`[Session] Storing session: ${session.id} | Shop: ${session.shop} | Expires: ${session.expires}`);
+    const result = await originalStoreCallback.call(sessionStorage, session);
+    console.log(`[Session] Store result for ${session.id}:`, result ? "SUCCESS" : "FAILED/UNDEFINED");
+    return result;
+};
+
+const originalLoadCallback = sessionStorage.loadSession;
+sessionStorage.loadSession = async (id) => {
+    console.log(`[Session] Loading session: ${id}`);
+    const session = await originalLoadCallback.call(sessionStorage, id);
+    console.log(`[Session] Load result for ${id}:`, session ? `FOUND (Shop: ${session.shop})` : "NOT FOUND");
+    return session;
+};
+
+const originalDeleteCallback = sessionStorage.deleteSession;
+sessionStorage.deleteSession = async (id) => {
+    console.log(`[Session] Deleting session: ${id}`);
+    return await originalDeleteCallback.call(sessionStorage, id);
+};
+
 if (sessionStorage instanceof RedisSessionStorage) {
   console.log("Using Redis Session Storage - REDIS_URL:", process.env.REDIS_URL ? "set" : "MISSING");
+  // Check Redis connection
+  if (sessionStorage.client) {
+      sessionStorage.client.ping().then((res) => {
+          console.log("Redis PING response:", res);
+      }).catch(err => {
+          console.error("Redis PING failed:", err);
+      });
+  }
 } else {
     console.log("Using SQLite Session Storage");
 }
