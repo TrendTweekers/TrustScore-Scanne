@@ -15,7 +15,12 @@ const __dirname = path.dirname(__filename);
 const FRONTEND_PATH = path.join(__dirname, '../dist');
 
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.DATABASE_URL || "./database.sqlite";
+const DB_PATH = path.join(process.cwd(), "database.sqlite");
+
+const sessionStorage =
+  process.env.REDIS_URL && process.env.REDIS_URL.trim() !== ""
+    ? new RedisSessionStorage(process.env.REDIS_URL)
+    : new SQLiteSessionStorage(DB_PATH);
 
 // Billing Configuration
 export const BILLING_PLANS = {
@@ -48,7 +53,7 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
-  sessionStorage: sessionStorage,
+  sessionStorage,
 });
 
 const app = express();
