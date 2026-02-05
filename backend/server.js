@@ -59,6 +59,13 @@ const shopify = shopifyApp({
 const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
 
+// MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
+app.use(['/api', '/api/*'], (req, _res, next) => {
+  req.headers['x-requested-with'] = 'XMLHttpRequest';
+  req.headers['check-iframe'] = '1';
+  next();
+});
+
 // Set up Shopify authentication and webhook handling
 app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
@@ -79,11 +86,7 @@ app.post(
 );
 
 // All /api/* requests (except auth/webhooks) must be authenticated
-app.use('/api/*', (req, res, next) => {
-  // Force Shopify to treat this as an API request to avoid redirects
-  req.headers['x-requested-with'] = 'XMLHttpRequest';
-  next();
-}, shopify.validateAuthenticatedSession());
+app.use(['/api', '/api/*'], shopify.validateAuthenticatedSession());
 
 app.use(express.json());
 app.use(shopify.cspHeaders()); // Ensure CSP headers are set

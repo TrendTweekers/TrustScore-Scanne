@@ -16,6 +16,8 @@ export function useAuthenticatedFetch() {
       const authUrlHeader = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
       const redirect = Redirect.create(app);
       redirect.dispatch(Redirect.Action.REMOTE, authUrlHeader || '/api/auth');
+      // Return a pending promise to halt execution while redirecting
+      return new Promise(() => {});
     }
 
     return response;
