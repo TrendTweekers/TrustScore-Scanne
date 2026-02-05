@@ -1,24 +1,13 @@
-import express from 'express';
-import { takeScreenshots } from '../services/puppeteer.js';
-import { calculateTrustScore } from '../services/scoring.js';
-import { getShop, getScanCount, saveScan, getScanHistory } from '../db.js';
-import { analyzeStoreWithClaude } from '../services/claude.js';
-import { sendScoreDropAlert } from '../services/email.js';
+const express = require('express');
+const { takeScreenshots } = require('../services/puppeteer.js');
+const { calculateTrustScore } = require('../services/scoring.js');
+const { getShop, getScanCount, saveScan, getScanHistory } = require('../db.js');
+const { analyzeStoreWithClaude } = require('../services/claude.js');
+const { sendScoreDropAlert } = require('../services/email.js');
 
 const router = express.Router();
 
 // Helper to ensure URL has protocol
-import { shopifyApp } from '@shopify/shopify-app-express';
-import { LATEST_API_VERSION } from '@shopify/shopify-api';
-import { restResources } from '@shopify/shopify-api/rest/admin/2023-04'; // Import rest resources if needed, but we can pass them in server.js
-// Actually we need the 'shopify' object from server.js to use clients.Rest, but here we can just use res.locals.shopify.session
-// Wait, to use `new shopify.api.clients.Rest` we need the `shopify` instance.
-// Let's import the configured shopify instance from server.js if possible, or pass it.
-// Alternatively, res.locals.shopify.api is available in the middleware context?
-// Let's check how @shopify/shopify-app-express exposes the api.
-// It exposes `res.locals.shopify.session`.
-// To use the client: `const client = new res.locals.shopify.api.clients.Rest({session});`
-
 const ensureProtocol = (url) => {
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     return `https://${url}`;
@@ -91,10 +80,7 @@ router.post('/scan', async (req, res) => {
     // 1. Take screenshots and extract raw data
     const puppeteerResult = await takeScreenshots(targetUrl);
 
-    // 2. Generate score
-    const scoreResult = calculateTrustScore(puppeteerResult);
-
-    // 2.5 AI Qualitative Analysis (PRO/PLUS only)
+    // 2. AI Qualitative Analysis (PRO/PLUS only)
     let aiAnalysis = null;
     if (shopData?.plan === 'PRO' || shopData?.plan === 'PLUS') {
         try {
@@ -105,8 +91,11 @@ router.post('/scan', async (req, res) => {
             console.error('AI Analysis failed:', aiError);
         }
     }
-    
-    // 3. Save to DB
+
+    // 3. Generate score (include AI analysis if available)
+    const scoreResult = calculateTrustScore({ ...puppeteerResult, aiAnalysis });
+
+    // 4. Save to DB
     // We save the homepage score as the main score for now, or maybe an average?
     // Let's save the homepage score.
     const finalScore = scoreResult.homepage ? scoreResult.homepage.score : scoreResult.score;
@@ -117,11 +106,6 @@ router.post('/scan', async (req, res) => {
         const previousScore = history[0].score;
         if (finalScore < previousScore) {
             console.log(`Score dropped for ${session.shop} (${previousScore} -> ${finalScore}). Sending alert...`);
-            // We need the shop email. For now, we'll fetch it from Shopify or use a placeholder if not stored.
-            // In a real app, we'd request the email scope and store it in the 'shops' table.
-            // For now, let's assume we can get it or just log it.
-            // We'll query Shopify for shop info if we had the access token handy in a way to use the REST client easily here.
-            // Or just use a dummy email for the demo.
             
             // Fetch shop details to get email
              try {
@@ -137,7 +121,7 @@ router.post('/scan', async (req, res) => {
         }
     }
 
-    await saveScan(session.shop, finalScore, {
+    await saveScan(session.shop, targetUrl, finalScore, {
         url: targetUrl,
         ...scoreResult,
         aiAnalysis, // Add AI analysis to saved data
@@ -172,4 +156,4 @@ router.get('/history', async (req, res) => {
     }
 });
 
-export default router;
+module.exports = router;

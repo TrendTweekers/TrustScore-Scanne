@@ -1,10 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk';
+const Anthropic = require('@anthropic-ai/sdk');
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export const analyzeStoreWithClaude = async (screenshots, textData) => {
+const analyzeStoreWithClaude = async (screenshots, textData) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn('ANTHROPIC_API_KEY is missing. Skipping AI analysis.');
     return null;
@@ -71,3 +71,5 @@ export const analyzeStoreWithClaude = async (screenshots, textData) => {
     return null; // Fail gracefully
   }
 };
+
+module.exports = { analyzeStoreWithClaude };

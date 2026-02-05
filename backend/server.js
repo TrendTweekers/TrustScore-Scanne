@@ -1,39 +1,25 @@
-import 'dotenv/config';
-import express from 'express';
-import { shopifyApp } from '@shopify/shopify-app-express';
-import { RedisSessionStorage } from "@shopify/shopify-app-session-storage-redis";
-import { SQLiteSessionStorage } from '@shopify/shopify-app-session-storage-sqlite';
-import { LATEST_API_VERSION, BillingInterval } from '@shopify/shopify-api';
-import { createOrUpdateShop } from './db.js';
-import scannerRoutes from './routes/scanner.js';
-import serveStatic from 'serve-static';
-import { fileURLToPath } from 'url';
-import path from 'path';
+require('dotenv').config();
+const express = require('express');
+const { shopifyApp } = require('@shopify/shopify-app-express');
+const { RedisSessionStorage } = require('@shopify/shopify-app-session-storage-redis');
+const { SQLiteSessionStorage } = require('@shopify/shopify-app-session-storage-sqlite');
+const { LATEST_API_VERSION, BillingInterval, DeliveryMethod } = require('@shopify/shopify-api');
+const { createOrUpdateShop, updateShopPlan } = require('./db.js');
+const scannerRoutes = require('./routes/scanner.js');
+const serveStatic = require('serve-static');
+const path = require('path');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const FRONTEND_PATH = path.join(__dirname, '../dist');
 
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(process.cwd(), "database.sqlite");const sessionStorage =
+const DB_PATH = process.env.SESSION_DB_PATH || path.join(process.cwd(), "database.sqlite");
+
+const sessionStorage =
   process.env.REDIS_URL && process.env.REDIS_URL.trim() !== ""
     ? new RedisSessionStorage(process.env.REDIS_URL)
     : new SQLiteSessionStorage(DB_PATH);
 
 if (sessionStorage instanceof RedisSessionStorage) {
-  // Hack to access internal client or we can trust the library throws if it fails.
-  // Actually, let's just create a separate client for the health check if we want to be 100% sure.
-  // But wait, the user asked to "redisClient.ping()". 
-  // RedisSessionStorage doesn't expose 'client' publicly in all versions. 
-  // Let's assume we can access it or just create a temporary one for the check.
-  // Better approach: Since we don't have 'redis' package imported to create a client easily without adding deps,
-  // we will try to use the one from sessionStorage if possible or skip if not.
-  // However, the user provided specific code: redisClient.ping()...
-  // This implies they might think we have a redisClient variable. We don't.
-  // I will add a check using the sessionStorage's client if accessible, or add a comment that we are skipping explicit ping 
-  // if we can't access it, but actually, let's try to see if we can just import redis.
-  // Actually, I'll use the user's intent: "Add Redis connection check". 
-  // I will assume I can use the client from the storage if I cast it (it usually has a client property).
   console.log("Using Redis Session Storage");
   // Check if we can access the client
   if (sessionStorage.client) {
@@ -56,8 +42,8 @@ console.log("Shopify app config:", {
   isEmbeddedApp: true
 });
 
-const shopify = shopifyApp({// Billing Configuration
-export const BILLING_PLANS = {
+// Billing Configuration
+const BILLING_PLANS = {
   PRO: {
     amount: 29.00,
     currencyCode: 'USD',
@@ -100,6 +86,32 @@ const shopify = shopifyApp({
   }
 });
 console.log('Session cookie configured with SameSite=none; Secure');
+
+const getPlanCode = (name) => {
+  if (!name) return 'FREE';
+  if (name.includes('Pro')) return 'PRO';
+  if (name.includes('Plus')) return 'PLUS';
+  return 'FREE';
+};
+
+const webhookHandlers = {
+  APP_SUBSCRIPTIONS_UPDATE: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: '/api/webhooks',
+    callback: async (topic, shop, body, webhookId) => {
+      const payload = JSON.parse(body);
+      console.log('Received subscription update:', payload);
+      const subscription = payload.app_subscription;
+      const planCode = (subscription && subscription.status === 'ACTIVE') 
+        ? getPlanCode(subscription.name) 
+        : 'FREE';
+      console.log(`Updating ${shop} to plan ${planCode}`);
+      await updateShopPlan(shop, planCode);
+    },
+  },
+};
+
+shopify.api.webhooks.addHandlers(webhookHandlers);
 
 const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
@@ -160,7 +172,7 @@ app.get(
 
 app.post(
   shopify.config.webhooks.path,
-  shopify.processWebhooks({ webhookHandlers: {} })
+  shopify.processWebhooks({ webhookHandlers })
 );
 
 // All /api/* requests (except auth/webhooks) must be authenticated
@@ -215,3 +227,5 @@ app.use('/*', shopify.ensureInstalledOnShop(), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports = { BILLING_PLANS };

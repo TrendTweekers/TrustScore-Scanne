@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+const nodemailer = require('nodemailer');
 
 // Create a test account if no real credentials are provided
 let testAccount = null;
@@ -18,11 +18,12 @@ const createTransporter = async () => {
         if (!testAccount) {
             testAccount = await nodemailer.createTestAccount();
             console.log('Created Ethereal Test Account:', testAccount.user);
+            console.log('Preview URL will be logged for sent emails.');
         }
         return nodemailer.createTransport({
-            host: 'smtp.ethereal.email',
-            port: 587,
-            secure: false,
+            host: testAccount.smtp.host,
+            port: testAccount.smtp.port,
+            secure: testAccount.smtp.secure,
             auth: {
                 user: testAccount.user,
                 pass: testAccount.pass,
@@ -31,33 +32,24 @@ const createTransporter = async () => {
     }
 };
 
-export const sendScoreDropAlert = async (shopEmail, shopUrl, oldScore, newScore) => {
+const sendScoreDropAlert = async (email, shop, oldScore, newScore) => {
     try {
         const transporter = await createTransporter();
-        const drop = oldScore - newScore;
-        
         const info = await transporter.sendMail({
             from: '"TrustScore Scanner" <alerts@trustscore.app>',
-            to: shopEmail,
-            subject: `⚠️ Alert: Trust Score Dropped for ${shopUrl}`,
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Trust Score Alert</h2>
-                    <p>Your store's trust score has dropped by <strong>${drop} points</strong>.</p>
-                    <ul>
-                        <li>Previous Score: ${oldScore}</li>
-                        <li>Current Score: ${newScore}</li>
-                    </ul>
-                    <p>Please log in to your dashboard to view the issues and fix them immediately to avoid losing sales.</p>
-                    <a href="https://admin.shopify.com/store/${shopUrl.replace('.myshopify.com', '')}/apps/trustscore-scanner" style="background: #D82C0D; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Dashboard</a>
-                </div>
-            `,
+            to: email || `merchant@${shop}`, // Use provided email or fallback
+            subject: `🚨 Trust Score Alert: Score Dropped for ${shop}`,
+            text: `Your Trust Score dropped from ${oldScore} to ${newScore}. Login to see details.`,
+            html: `<b>Your Trust Score dropped from ${oldScore} to ${newScore}.</b><br>Login to the app to see details and fix issues.`,
         });
 
-        console.log('Message sent: %s', info.messageId);
-        console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
-        return info;
-    } catch (error) {
-        console.error('Failed to send email:', error);
+        console.log("Message sent: %s", info.messageId);
+        if (testAccount) {
+             console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+        }
+    } catch (e) {
+        console.error("Failed to send email alert:", e);
     }
 };
+
+module.exports = { sendScoreDropAlert };

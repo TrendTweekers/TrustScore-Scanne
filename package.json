@@ -2,7 +2,6 @@
   "name": "trustscore-scanner",
   "version": "1.0.0",
   "description": "Shopify app for analyzing store trust signals",
-  "type": "module",
   "main": "backend/server.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

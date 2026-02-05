@@ -1,8 +1,15 @@
+[phases.setup]
+nixPkgs = ["nodejs", "npm", "chromium", "nss", "freetype", "freetype-ttf", "fontconfig", "dejavu_fonts"]
+
 [phases.install]
-cmds = ["npm install --legacy-peer-deps"]
+cmds = ["npm install"]
 
 [phases.build]
-cmds = ["echo 'No build needed'"]
+cmds = ["npm run build"]
 
 [start]
-cmd = "node backend/server.js"
+cmd = "npm start"
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
