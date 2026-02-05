@@ -6,7 +6,7 @@ export default defineConfig({
   root: join(process.cwd(), 'frontend'),
   plugins: [react()],
   build: {
-    outDir: join(process.cwd(), 'frontend', 'dist'),
+    outDir: join(process.cwd(), 'dist'),
     emptyOutDir: true,
   },
   server: {
