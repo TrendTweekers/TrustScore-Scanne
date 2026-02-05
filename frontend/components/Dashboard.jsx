@@ -273,7 +273,10 @@ function Dashboard() {
                 {/* Scan Result */}
                 {scanResult && !loading && (
                     <Layout.Section>
-                        <TrustScore result={scanResult} />
+                        <TrustScore 
+                            result={scanResult} 
+                            onUpgrade={() => setShowUpgradeModal(true)}
+                        />
                     </Layout.Section>
                 )}
 

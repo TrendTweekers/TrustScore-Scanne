@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs } from '@shopify/polaris';
+import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
 
-function TrustScore({ result }) {
+function TrustScore({ result, onUpgrade }) {
   // result can be the old structure OR the new structure { homepage, productPage }
   // We normalize it here
   const isNewStructure = result.homepage && result.productPage;
@@ -130,17 +130,36 @@ function TrustScore({ result }) {
           ) : (
              // Upsell for Free Plan users (only show on homepage tab to avoid clutter)
              type === 'homepage' && (
-                 <Card>
-                    <BlockStack gap="400">
-                       <InlineGrid columns="auto auto" gap="200" alignItems="center">
-                           <Icon source={InfoIcon} tone="subdued" />
-                           <Text variant="headingMd" as="h3" tone="subdued">AI Qualitative Analysis</Text>
-                       </InlineGrid>
-                       <Banner tone="info" title="Unlock AI Insights">
-                           <p>Upgrade to <strong>Pro</strong> to get qualitative design analysis, copy review, and personalized fixes from Claude AI.</p>
-                       </Banner>
-                    </BlockStack>
-                 </Card>
+                 <div 
+                    onClick={onUpgrade}
+                    style={{ cursor: 'pointer' }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') onUpgrade(); }}
+                 >
+                    <Card>
+                       <BlockStack gap="400">
+                          <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                              <Icon source={InfoIcon} tone="subdued" />
+                              <Text variant="headingMd" as="h3" tone="subdued">AI Qualitative Analysis</Text>
+                          </InlineGrid>
+                          <Banner tone="info">
+                              <BlockStack gap="300">
+                                  <Text as="p" fontWeight="bold">Unlock AI Insights</Text>
+                                  <Text as="p">Upgrade to <strong>Pro</strong> to get qualitative design analysis, copy review, and personalized fixes from Claude AI.</Text>
+                                  <Box>
+                                      <Button variant="primary" onClick={(e) => {
+                                          e.stopPropagation();
+                                          onUpgrade();
+                                      }}>
+                                          Upgrade to Pro ($19/mo)
+                                      </Button>
+                                  </Box>
+                              </BlockStack>
+                          </Banner>
+                       </BlockStack>
+                    </Card>
+                 </div>
              )
           )}
 
