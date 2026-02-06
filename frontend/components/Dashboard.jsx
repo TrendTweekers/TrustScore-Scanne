@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs, Spinner, Icon, Box } from '@shopify/polaris';
-import { CircleTickMajor } from '@shopify/polaris-icons';
+import { CheckCircleIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import TrustScore from './TrustScore';
@@ -277,15 +277,15 @@ function Dashboard() {
                                  <Box width="100%" maxWidth="400px">
                                      <BlockStack gap="400">
                                          <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Icon source={CircleTickMajor} tone="success" />
+                                             <Icon source={CheckCircleIcon} tone="success" />
                                              <Text>Capturing screenshots (Desktop & Mobile)</Text>
                                          </InlineGrid>
                                          <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Icon source={CircleTickMajor} tone="success" />
+                                             <Icon source={CheckCircleIcon} tone="success" />
                                              <Text>Analyzing 25+ trust signals</Text>
                                          </InlineGrid>
                                          <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Icon source={CircleTickMajor} tone="success" />
+                                             <Icon source={CheckCircleIcon} tone="success" />
                                              <Text>Calculating Trust Score</Text>
                                          </InlineGrid>
                                          <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
