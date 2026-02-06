@@ -294,28 +294,47 @@ app.use('/api', scannerRoutes);
 
 // Billing Route
 const handleBillingRequest = async (req, res) => {
+  console.log("=== BILLING SUBSCRIBE HIT ===");
   const { plan } = req.query;
   const session = res.locals.shopify.session;
   
+  console.log("Plan:", plan);
+  console.log("Shop:", session?.shop);
+  console.log("Session exists:", !!session);
+
   if (!BILLING_PLANS[plan]) {
+    console.error("Invalid plan requested:", plan);
     return res.status(400).json({ error: 'Invalid plan' });
   }
 
   const isTest = process.env.NODE_ENV !== 'production';
+  console.log("Is Test Mode:", isTest);
 
   try {
-    const confirmationUrl = await shopify.api.billing.request({
+    const billingParams = {
       session,
       plan: BILLING_PLANS[plan].label,
       isTest, 
       ...BILLING_PLANS[plan],
       returnUrl: `https://${shopify.config.api.hostName}/?shop=${session.shop}&billing=success`,
-    });
+    };
+    
+    console.log("Calling shopify.api.billing.request with params:", JSON.stringify({
+        ...billingParams,
+        session: { id: session.id, shop: session.shop } // Don't log full session token
+    }, null, 2));
 
+    const confirmationUrl = await shopify.api.billing.request(billingParams);
+
+    console.log("Billing request successful. Confirmation URL:", confirmationUrl);
     res.json({ confirmationUrl });
   } catch (error) {
     console.error('Billing request failed:', error);
-    res.status(500).json({ error: 'Failed to create billing request' });
+    console.error('Error stack:', error.stack);
+    if (error.response) {
+        console.error('Error response data:', JSON.stringify(error.response.data || {}, null, 2));
+    }
+    res.status(500).json({ error: 'Failed to create billing request', details: error.message });
   }
 };
 
