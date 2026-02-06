@@ -11,6 +11,17 @@
       data-website-id="52bac8a6-c9da-4f6d-a8d2-6ba66efb14fc" 
       data-auto-track="true">
     </script>
+    <script>
+      window.addEventListener("load", function () {
+        if (!window.umami) {
+          const s = document.createElement("script");
+          s.src = "https://cloud.umami.is/script.js";
+          s.defer = true;
+          s.setAttribute("data-website-id", "52bac8a6-c9da-4f6d-a8d2-6ba66efb14fc");
+          document.head.appendChild(s);
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -72,6 +72,16 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, [loadDashboard]);
 
+  useEffect(() => {
+    if (showSuccessBanner && dashboardData?.plan) {
+        trackEvent('upgrade_completed', { plan: dashboardData.plan });
+    }
+  }, [showSuccessBanner, dashboardData?.plan]);
+
+  useEffect(() => {
+    trackEvent("app_loaded");
+  }, []);
+
   const handleScan = async () => {
     // Check limit before scanning
     if (dashboardData?.plan === 'FREE' && dashboardData?.scanCount >= 1) {

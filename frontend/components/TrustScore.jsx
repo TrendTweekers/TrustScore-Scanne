@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
-import { track } from '../utils/analytics';
+import { trackEvent } from '../utils/analytics';
 
 function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
   if (!plan) {
@@ -151,7 +151,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
              type === 'homepage' && (
                  <div 
                     onClick={() => {
-                        trackEvent('UPGRADE_CLICKED', { source: 'ai_gating_card' });
+                        trackEvent('upgrade_clicked', { from_plan: plan, source: 'ai_gating_card' });
                         onUpgrade();
                     }}
                     style={{ cursor: 'pointer' }}
@@ -159,7 +159,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                     tabIndex={0}
                     onKeyDown={(e) => { 
                         if (e.key === 'Enter') {
-                            trackEvent('UPGRADE_CLICKED', { source: 'ai_gating_card' });
+                            trackEvent('upgrade_clicked', { from_plan: plan, source: 'ai_gating_card' });
                             onUpgrade(); 
                         }
                     }}

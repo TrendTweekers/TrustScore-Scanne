@@ -26,6 +26,7 @@ const {
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
 const path = require('path');
+const helmet = require('helmet');
 
 const FRONTEND_PATH = path.join(__dirname, '../dist');
 
@@ -201,6 +202,21 @@ app.use((req, res, next) => {
   console.log(`[RAW REQUEST] ${req.method} ${req.path}`);
   next();
 });
+
+// CSP Configuration
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://cloud.umami.is"],
+        connectSrc: ["'self'", "https://cloud.umami.is", "https://api.umami.is"],
+        imgSrc: ["'self'", "data:", "https:"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      },
+    },
+  })
+);
 
 console.log("=== SERVER STARTING ===");
 console.log("Auth path:", shopify.config.auth.path);
