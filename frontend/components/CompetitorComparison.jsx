@@ -126,6 +126,47 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                         <Banner tone="warning">Invalid scan data. Please try again.</Banner>
                     ) : (
                     <>
+                    {/* TRUST GAP CARD */}
+                    {(() => {
+                        const gap = selectedScan.score - myLatestScore;
+                        const isLosing = gap > 0;
+                        const gapValue = Math.abs(gap);
+                        
+                        if (isLosing) {
+                            return (
+                                <Box background="bg-surface-critical" padding="500" borderRadius="200" borderWidth="1" borderColor="border-critical">
+                                    <BlockStack gap="200" align="center">
+                                        <Text variant="headingXl" tone="critical">
+                                            TRUST GAP: +{gapValue} POINTS
+                                        </Text>
+                                        <Text variant="bodyMd" fontWeight="bold">
+                                            Your store: {myLatestScore} | Competitor: {selectedScan.score}
+                                        </Text>
+                                        <Text tone="critical" fontWeight="bold">
+                                            👉 Stores with this gap typically convert 18–35% worse.
+                                        </Text>
+                                    </BlockStack>
+                                </Box>
+                            );
+                        } else {
+                            return (
+                                <Box background="bg-surface-success" padding="500" borderRadius="200" borderWidth="1" borderColor="border-success">
+                                    <BlockStack gap="200" align="center">
+                                        <Text variant="headingXl" tone="success">
+                                            YOU ARE LEADING BY {gapValue} POINTS
+                                        </Text>
+                                        <Text variant="bodyMd" fontWeight="bold">
+                                            Your store: {myLatestScore} | Competitor: {selectedScan.score}
+                                        </Text>
+                                        <Text tone="success" fontWeight="bold">
+                                            🔥 Your trust score is higher! Keep optimizing to maintain your lead.
+                                        </Text>
+                                    </BlockStack>
+                                </Box>
+                            );
+                        }
+                    })()}
+
                     <InlineGrid columns={2} gap="800">
                         {/* My Store */}
                         <BlockStack gap="400">
