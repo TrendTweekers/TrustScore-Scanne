@@ -61,6 +61,31 @@ router.post('/onboarding', async (req, res) => {
     }
 });
 
+// POST /api/revenue-bracket
+router.post('/revenue-bracket', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        const { revenue } = req.body;
+        
+        if (!revenue) {
+            return res.status(400).json({ error: 'Revenue bracket is required' });
+        }
+
+        await updateShopRevenue(session.shop, revenue);
+        
+        // Return updated shop info
+        const shopData = await getShop(session.shop);
+        
+        res.json({ 
+            success: true, 
+            shop: shopData 
+        });
+    } catch (error) {
+        console.error('Revenue bracket update error:', error);
+        res.status(500).json({ error: 'Failed to update revenue bracket' });
+    }
+});
+
 // GET /api/scans/history
 router.get('/scans/history', async (req, res) => {
     try {

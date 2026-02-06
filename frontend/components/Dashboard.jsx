@@ -4,6 +4,7 @@ import { CheckCircleIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
+import { calculateRevenueEstimate } from '../utils/revenueEstimate';
 import logo from '../assets/trustscore-logo.svg';
 import TrustScore from './TrustScore';
 import ScoreInfo from './ScoreInfo';
@@ -36,6 +37,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingMode, setOnboardingMode] = useState('full');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
@@ -148,8 +150,11 @@ function Dashboard() {
       );
   }
 
-  const { currentScore, trend, history, plan, scanCount, aiUsage } = dashboardData;
+  const { currentScore, trend, history, plan, scanCount, aiUsage, shopData } = dashboardData;
   const isFree = plan === 'FREE';
+
+  const revenueBracket = shopData?.revenue_bracket;
+  const revenueEstimate = calculateRevenueEstimate(revenueBracket, currentScore);
 
   const lastScannedDate = history.length > 0 ? new Date(history[0].timestamp || history[0].createdAt) : null;
   const hoursAgo = lastScannedDate ? Math.floor((new Date() - lastScannedDate) / (1000 * 60 * 60)) : 0;
@@ -172,9 +177,14 @@ function Dashboard() {
     >
       <OnboardingModal 
         open={showOnboarding} 
+        mode={onboardingMode}
         onClose={() => {
             setShowOnboarding(false);
-            localStorage.setItem('dismissed_onboarding', 'true');
+            if (onboardingMode === 'full') {
+                localStorage.setItem('dismissed_onboarding', 'true');
+            }
+            setOnboardingMode('full');
+            loadDashboard();
         }} 
         onStartScan={handleStartOnboardingScan}
       />
@@ -185,6 +195,23 @@ function Dashboard() {
       />
 
       <Layout>
+        {!revenueBracket && (
+            <Layout.Section>
+                <CalloutCard
+                    title="Set your monthly revenue to personalize your TrustScore"
+                    illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
+                    primaryAction={{
+                        content: 'Set Revenue',
+                        onAction: () => {
+                            setOnboardingMode('revenue_only');
+                            setShowOnboarding(true);
+                        }
+                    }}
+                >
+                    <p>We use your revenue to estimate how much you're losing due to trust issues.</p>
+                </CalloutCard>
+            </Layout.Section>
+        )}
         <Layout.Section>
              <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
         </Layout.Section>
@@ -198,6 +225,12 @@ function Dashboard() {
                             <InlineGrid columns={['twoThirds', 'oneThird']} gap="600" alignItems="center">
                                 {/* LEFT: Score & Trust Tier */}
                                 <BlockStack gap="400">
+                                    {/* Branding Header */}
+                                    <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                         <img src={logo} alt="TrustScore" style={{height: '24px'}} />
+                                         <Text variant="headingSm" tone="subdued">TrustScore</Text>
+                                    </InlineGrid>
+
                                     <InlineGrid columns="auto auto" gap="400" alignItems="center">
                                         <Text variant="heading4xl" as="h1" fontWeight="bold">
                                             {currentScore}/100
@@ -217,10 +250,26 @@ function Dashboard() {
                                     {/* Revenue Estimator */}
                                     <Box background="bg-surface" padding="300" borderRadius="200" width="fit-content">
                                         <BlockStack gap="100">
-                                            <Text tone="subdued" variant="bodySm">Estimated Revenue Being Lost</Text>
-                                            <Text variant="headingMd" tone="success">
-                                                ${(100 - currentScore) * 50} – ${(100 - currentScore) * 150} / month
+                                            <Text tone="subdued" variant="bodySm">
+                                                {revenueBracket ? 'Estimated Revenue Being Lost' : 'Estimate Lost Sales'}
                                             </Text>
+                                            {revenueBracket && revenueEstimate ? (
+                                                <BlockStack gap="0">
+                                                    <Text variant="headingMd" tone="success">
+                                                        {revenueEstimate.text}
+                                                    </Text>
+                                                    <Text variant="bodyXs" tone="subdued">
+                                                        Based on {revenueEstimate.pctRange} loss (Trust Tier)
+                                                    </Text>
+                                                </BlockStack>
+                                            ) : (
+                                                <Button size="micro" onClick={() => {
+                                                    setOnboardingMode('revenue_only');
+                                                    setShowOnboarding(true);
+                                                }}>
+                                                    Set Revenue
+                                                </Button>
+                                            )}
                                         </BlockStack>
                                     </Box>
 
@@ -234,9 +283,6 @@ function Dashboard() {
 
                                 {/* RIGHT: Primary Actions */}
                                 <BlockStack gap="300" align="end">
-                                    <Button variant="primary" size="large" onClick={handleScan} disabled={loading} loading={loading}>
-                                        Run Trust Audit
-                                    </Button>
                                     <Button variant="plain" onClick={() => {
                                         const el = document.getElementById('recommendations-section');
                                         if (el) el.scrollIntoView({ behavior: 'smooth' });

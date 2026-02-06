@@ -1,21 +1,42 @@
 import React, { useState } from 'react';
 import { Modal, TextContainer, Button, BlockStack, Text, List, Select } from '@shopify/polaris';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
+import { REVENUE_BRACKETS } from '../utils/revenueEstimate';
+import { trackEvent } from '../utils/analytics';
 
-export function OnboardingModal({ open, onClose, onStartScan }) {
+export function OnboardingModal({ open, onClose, onStartScan, mode = 'full' }) {
   const fetch = useAuthenticatedFetch();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(mode === 'revenue_only' ? 2 : 1);
   const [revenue, setRevenue] = useState('');
+
+  // Reset step when opening in a different mode
+  React.useEffect(() => {
+      if (open) {
+          setStep(mode === 'revenue_only' ? 2 : 1);
+      }
+  }, [open, mode]);
 
   const handleNext = async () => {
     if (step === 2 && revenue) {
         // Save revenue
         try {
-            await fetch('/api/onboarding', {
+            await fetch('/api/revenue-bracket', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ revenue })
             });
+
+            trackEvent('revenue_bracket_set', { bracket: revenue });
+            
+            if (mode === 'revenue_only') {
+                onClose();
+                // Trigger a refresh of the dashboard if needed? 
+                // The parent should handle data reload or we can pass a callback.
+                // But onStartScan is usually for the full flow.
+                // We'll rely on the parent polling or reloading.
+                if (onStartScan) onStartScan(); // Re-use this to trigger reload/scan if provided, or just close.
+                return; 
+            }
         } catch (e) {
             console.error("Failed to save revenue", e);
         }
@@ -31,19 +52,18 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
 
   const revenueOptions = [
       {label: 'Select monthly revenue', value: ''},
-      {label: 'Less than $1,000', value: '<1k'},
-      {label: '$1,000 - $10,000', value: '1k-10k'},
-      {label: '$10,000 - $50,000', value: '10k-50k'},
-      {label: '$50,000+', value: '50k+'}
+      ...REVENUE_BRACKETS
   ];
+
+  const isRevenueMode = mode === 'revenue_only';
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={step === 1 ? "Welcome to TrustScore!" : step === 2 ? "Customize Your Audit" : step === 3 ? "How it Works" : "Ready to Audit"}
+      title={isRevenueMode ? "Update Revenue Bracket" : (step === 1 ? "Welcome to TrustScore!" : step === 2 ? "Customize Your Audit" : step === 3 ? "How it Works" : "Ready to Audit")}
       primaryAction={{
-        content: step === 4 ? 'Run Trust Audit (60 seconds)' : 'Next',
+        content: isRevenueMode ? 'Save' : (step === 4 ? 'Run Trust Audit (60 seconds)' : 'Next'),
         onAction: handleNext,
         disabled: step === 2 && !revenue
       }}
@@ -56,7 +76,7 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
     >
       <Modal.Section>
         <BlockStack gap="400">
-          {step === 1 && (
+          {step === 1 && !isRevenueMode && (
             <TextContainer>
               <Text as="h2" variant="headingMd">
                 Stores fixing trust signals see 15-30% conversion lifts
