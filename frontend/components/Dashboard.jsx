@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs, Spinner, Icon, Box, Toast, Tooltip, Modal, Divider } from '@shopify/polaris';
-import { CheckCircleIcon, NotificationIcon, ShieldCheckMarkIcon, ChartVerticalIcon, AlertCircleIcon, ArrowRightIcon, EmailIcon } from '@shopify/polaris-icons';
+import { CheckCircleIcon, NotificationIcon, ShieldCheckMarkIcon, ChartVerticalIcon, AlertCircleIcon, ArrowRightIcon, EmailIcon, SearchIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
@@ -282,11 +282,14 @@ function Dashboard() {
           to { opacity: 1; transform: translateY(0); }
         }
         .trustscore-header {
-            background-color: #009688 !important;
+            background-color: #00C853 !important;
         }
         .trustscore-header * {
             color: white !important;
             fill: white !important;
+        }
+        .trustscore-gradient-bg {
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
         }
       `}</style>
 
@@ -294,10 +297,10 @@ function Dashboard() {
       <Box padding="400" className="trustscore-header" borderBlockEndWidth="025" borderColor="border-subdued">
          <InlineGrid columns="1fr auto" alignItems="center">
            <InlineGrid columns="auto auto" gap="300" alignItems="center">
-              <BrandLogo size={32} withWordmark />
-              <Badge tone="info">Scanner</Badge>
+              <Icon source={ShieldCheckMarkIcon} color="white" />
+              <Text variant="headingLg" as="h1" fontWeight="bold">TrustScore <span style={{fontWeight: '800'}}>Scanner</span></Text>
            </InlineGrid>
-           <Button variant="primary" icon={CheckCircleIcon} onClick={handleScan} disabled={loading} loading={loading}>
+           <Button variant="primary" icon={SearchIcon} onClick={handleScan} disabled={loading} loading={loading}>
               {scanCount === 0 ? 'Run Trust Audit' : 'Run Trust Audit'}
            </Button>
          </InlineGrid>
@@ -333,13 +336,15 @@ function Dashboard() {
                 {/* Unified Hero Section */}
                 <Layout.Section>
                     <Card padding="0">
-                        <Box padding="500" background="bg-surface-secondary">
+                        <Box padding="600" className="trustscore-gradient-bg">
                             <InlineGrid columns={{ xs: 1, md: ['twoThirds', 'oneThird'] }} gap="500" alignItems="center">
                                 {/* LEFT: Score & Trust Tier */}
                                 <BlockStack gap="400">
                                     <InlineGrid columns="auto auto" gap="400" alignItems="center">
                                         <InlineGrid columns="auto auto" gap="200" alignItems="center">
-                                           <Icon source={ShieldCheckMarkIcon} tone={hasScans && currentScore >= 70 ? 'success' : 'subdued'} />
+                                           <div style={{ transform: 'scale(1.2)' }}>
+                                              <Icon source={ShieldCheckMarkIcon} tone={hasScans && currentScore >= 70 ? 'success' : 'subdued'} />
+                                           </div>
                                            <Text variant="heading4xl" as="p" fontWeight="bold">
                                                {hasScans ? `${currentScore}/100` : '--/100'}
                                            </Text>
@@ -360,7 +365,11 @@ function Dashboard() {
                                                 )}
                                             </BlockStack>
                                         ) : (
-                                            <Text tone="subdued" variant="bodyLg">Run your first Trust Audit to get your TrustScore.</Text>
+                                            <Box background="bg-surface-secondary" padding="200" borderRadius="200">
+                                                <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                                    <Text tone="subdued" variant="bodyMd" fontWeight="bold">Run your first audit to unlock score</Text>
+                                                </InlineGrid>
+                                            </Box>
                                         )}
                                     </InlineGrid>
 
@@ -402,17 +411,12 @@ function Dashboard() {
 
                                 {/* RIGHT: Primary Actions */}
                                 <BlockStack gap="300" align="end">
-                                    <InlineGrid columns="auto auto" gap="300">
-                                        <Button size="large" icon={ShieldCheckMarkIcon} onClick={() => window.open('https://apps.shopify.com/search?q=trust+badges', '_blank')}>
-                                            Trust Badge Builder
-                                        </Button>
-                                        <Button size="large" variant="primary" icon={ArrowRightIcon} onClick={() => {
-                                            const el = document.getElementById('recommendations-section');
-                                            if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                        }}>
-                                            View Fixes
-                                        </Button>
-                                    </InlineGrid>
+                                    <Button size="large" variant="primary" icon={ArrowRightIcon} onClick={() => {
+                                        const el = document.getElementById('recommendations-section');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    }}>
+                                        View Fixes
+                                    </Button>
                                 </BlockStack>
                             </InlineGrid>
                         </Box>
@@ -504,12 +508,14 @@ function Dashboard() {
 
                         {/* Scan Result */}
                         {scanResult && !loading && (
-                            <TrustScore 
-                                result={scanResult} 
-                                plan={plan}
-                                aiUsageCount={aiUsage}
-                                onUpgrade={() => setShowUpgradeModal(true)}
-                            />
+                            <div style={{ animation: 'fadeIn 0.8s ease-out' }}>
+                                <TrustScore 
+                                    result={scanResult} 
+                                    plan={plan}
+                                    aiUsageCount={aiUsage}
+                                    onUpgrade={() => setShowUpgradeModal(true)}
+                                />
+                            </div>
                         )}
                     </BlockStack>
                 </Layout.Section>
@@ -568,7 +574,10 @@ function Dashboard() {
                                      </BlockStack>
 
                                      {isFree ? (
-                                         <Button fullWidth onClick={() => handleUpgrade('PRO')}>Enable Monitoring</Button>
+                                         <BlockStack gap="200">
+                                            <Button fullWidth variant="primary" tone="critical" onClick={() => handleUpgrade('PRO')}>Upgrade to Pro</Button>
+                                            <Text variant="bodyXs" tone="subdued" alignment="center">Pro users get weekly reports & instant score drop alerts</Text>
+                                         </BlockStack>
                                      ) : (
                                          <Button fullWidth icon={EmailIcon} onClick={() => setShowPreviewModal(true)}>
                                              Preview Sample Report

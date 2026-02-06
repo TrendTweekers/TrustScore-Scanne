@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button, Badge, Divider } from '@shopify/polaris';
-import { InfoIcon, ClockIcon, CashDollarIcon, WrenchIcon, MagicIcon, ArrowRightIcon } from '@shopify/polaris-icons';
+import { InfoIcon, ClockIcon, CashDollarIcon, WrenchIcon, MagicIcon, ArrowRightIcon, ExternalLinkIcon } from '@shopify/polaris-icons';
 import { trackEvent } from '../utils/analytics';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
@@ -315,6 +315,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket }) {
                       {displayedRecommendations.map((rec, index) => {
                         const meta = getFixMetadata(rec.issue);
                         const autoFix = getAutoFixAction(rec.issue);
+                        const isTrustBadgeIssue = rec.issue.toLowerCase().includes('badge') || (rec.howToFix && rec.howToFix.toLowerCase().includes('badge'));
                         
                         return (
                         <div 
@@ -324,11 +325,11 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket }) {
                             cursor: 'default'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.transform = 'scale(1)';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
                         >
@@ -372,18 +373,33 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket }) {
                               <Text fontWeight="bold">How to fix:</Text>
                               <Text as="p" style={{ whiteSpace: 'pre-line' }}>{rec.howToFix}</Text>
                               
-                              {autoFix && (
-                                  <Box paddingBlockStart="300">
-                                      <Button 
-                                          variant="primary" 
-                                          tone="success"
-                                          icon={MagicIcon}
-                                          onClick={() => window.open(autoFix.url, '_blank')}
-                                      >
-                                          {autoFix.label}
-                                      </Button>
-                                  </Box>
-                              )}
+                              <InlineGrid columns="auto auto" gap="300">
+                                  {autoFix && (
+                                      <Box paddingBlockStart="300">
+                                          <Button 
+                                              variant="primary" 
+                                              tone="success"
+                                              icon={MagicIcon}
+                                              onClick={() => window.open(autoFix.url, '_blank')}
+                                          >
+                                              {autoFix.label}
+                                          </Button>
+                                      </Box>
+                                  )}
+
+                                  {isTrustBadgeIssue && (
+                                      <Box paddingBlockStart="300">
+                                          <Button 
+                                              variant="primary" 
+                                              tone="success"
+                                              icon={ExternalLinkIcon}
+                                              onClick={() => window.open('https://apps.shopify.com/search?q=trust+badges', '_blank')}
+                                          >
+                                              Open Trust Badge Builder
+                                          </Button>
+                                      </Box>
+                                  )}
+                              </InlineGrid>
                             </Box>
                             {rec.resourceLinks && rec.resourceLinks.length > 0 && (
                               <Box paddingBlockStart="200">
