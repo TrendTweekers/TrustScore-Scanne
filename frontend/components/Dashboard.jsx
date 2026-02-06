@@ -166,16 +166,26 @@ function Dashboard() {
       { id: 'help', content: 'Help & FAQ' },
   ];
 
+  const handleOpenRevenueModal = () => {
+    setOnboardingMode('revenue_only');
+    setShowOnboarding(true);
+  };
+
+  const hasScans = scanCount > 0 || history.length > 0;
+
   return (
-    <Page 
-        title="TrustScore" 
-        primaryAction={
-            selectedTab === 0 && 
-            <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
-                {scanCount === 0 ? 'Run Trust Audit (60 seconds)' : 'Run Trust Audit'}
-            </Button>
-        }
-    >
+    <Page title="TrustScore">
+      {selectedTab === 0 && (
+        <Box paddingBlockEnd="400">
+           <InlineGrid columns="1fr auto" alignItems="center">
+             <BrandLogo size={28} withWordmark />
+             <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
+                {scanCount === 0 ? 'Run Trust Audit (60s)' : 'Run Trust Audit'}
+             </Button>
+           </InlineGrid>
+        </Box>
+      )}
+
       <OnboardingModal 
         open={showOnboarding} 
         mode={onboardingMode}
@@ -196,17 +206,14 @@ function Dashboard() {
       />
 
       <Layout>
-        {!revenueBracket && (
+        {selectedTab === 0 && !revenueBracket && (
             <Layout.Section>
                 <CalloutCard
                     title="Set your monthly revenue to personalize your TrustScore"
                     illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
                     primaryAction={{
                         content: 'Set Revenue',
-                        onAction: () => {
-                            setOnboardingMode('revenue_only');
-                            setShowOnboarding(true);
-                        }
+                        onAction: handleOpenRevenueModal
                     }}
                 >
                     <p>We use your revenue to estimate how much you're losing due to trust issues.</p>
@@ -226,23 +233,25 @@ function Dashboard() {
                             <InlineGrid columns={['twoThirds', 'oneThird']} gap="600" alignItems="center">
                                 {/* LEFT: Score & Trust Tier */}
                                 <BlockStack gap="400">
-                                    {/* Branding Header */}
-                                    <BrandLogo size={24} />
-
                                     <InlineGrid columns="auto auto" gap="400" alignItems="center">
                                         <Text variant="heading4xl" as="p" fontWeight="bold">
-                                            {currentScore}/100
+                                            {hasScans ? `${currentScore}/100` : '--/100'}
                                         </Text>
-                                        <BlockStack gap="100">
-                                            <Badge tone={currentScore >= 70 ? 'success' : currentScore >= 40 ? 'attention' : 'critical'} size="large">
-                                                Trust Tier: {currentScore >= 85 ? 'Elite' : currentScore >= 70 ? 'Trusted' : currentScore >= 40 ? 'Needs Optimization' : 'At Risk'}
-                                            </Badge>
-                                            {currentScore < 70 && (
-                                                <Text tone="critical" fontWeight="bold">
-                                                    ⚠️ Stores at this level typically lose 15–35% of potential conversions.
-                                                </Text>
-                                            )}
-                                        </BlockStack>
+                                        
+                                        {hasScans ? (
+                                            <BlockStack gap="100">
+                                                <Badge tone={currentScore >= 70 ? 'success' : currentScore >= 40 ? 'attention' : 'critical'} size="large">
+                                                    Trust Tier: {currentScore >= 85 ? 'Elite' : currentScore >= 70 ? 'Trusted' : currentScore >= 40 ? 'Needs Optimization' : 'At Risk'}
+                                                </Badge>
+                                                {currentScore < 70 && (
+                                                    <Text tone="critical" fontWeight="bold">
+                                                        ⚠️ Stores at this level typically lose 15–35% of potential conversions.
+                                                    </Text>
+                                                )}
+                                            </BlockStack>
+                                        ) : (
+                                            <Text tone="subdued" variant="bodyLg">Run your first Trust Audit to get your TrustScore.</Text>
+                                        )}
                                     </InlineGrid>
 
                                     {/* Revenue Estimator */}
@@ -251,32 +260,33 @@ function Dashboard() {
                                             <Text tone="subdued" variant="bodySm">
                                                 {revenueBracket ? 'Estimated Revenue Being Lost' : 'Estimate Lost Sales'}
                                             </Text>
-                                            {revenueBracket && revenueEstimate ? (
-                                                <BlockStack gap="0">
-                                                    <Text variant="headingMd" tone="success">
-                                                        {revenueEstimate.text}
-                                                    </Text>
-                                                    <Text variant="bodyXs" tone="subdued">
-                                                        Based on {revenueEstimate.pctRange} loss (Trust Tier)
-                                                    </Text>
-                                                </BlockStack>
+                                            {revenueBracket ? (
+                                                revenueEstimate && (
+                                                    <BlockStack gap="0">
+                                                        <Text variant="headingMd" tone="success">
+                                                            {revenueEstimate.text}
+                                                        </Text>
+                                                        <Text variant="bodyXs" tone="subdued">
+                                                            Based on {revenueEstimate.pctRange} loss (Trust Tier)
+                                                        </Text>
+                                                    </BlockStack>
+                                                )
                                             ) : (
-                                                <Button size="micro" onClick={() => {
-                                                    setOnboardingMode('revenue_only');
-                                                    setShowOnboarding(true);
-                                                }}>
-                                                    Set Revenue
-                                                </Button>
+                                                <Text variant="bodySm" tone="subdued">
+                                                    <Button variant="plain" onClick={handleOpenRevenueModal}>Set revenue</Button> to see estimate.
+                                                </Text>
                                             )}
                                         </BlockStack>
                                     </Box>
 
                                     {/* Stat Chips */}
-                                    <InlineGrid columns="auto auto auto" gap="300">
-                                        <Badge tone="info">Last audit: {lastScannedText}</Badge>
-                                        <Badge tone={trend >= 0 ? 'success' : 'critical'}>Trend: {trend > 0 ? '+' : ''}{trend}</Badge>
-                                        <Badge tone={isFree ? 'attention' : 'success'}>Plan: {plan}</Badge>
-                                    </InlineGrid>
+                                    {hasScans && (
+                                        <InlineGrid columns="auto auto auto" gap="300">
+                                            <Badge tone="info">Last audit: {lastScannedText}</Badge>
+                                            <Badge tone={trend >= 0 ? 'success' : 'critical'}>Trend: {trend > 0 ? '+' : ''}{trend}</Badge>
+                                            <Badge tone={isFree ? 'attention' : 'success'}>Plan: {plan}</Badge>
+                                        </InlineGrid>
+                                    )}
                                 </BlockStack>
 
                                 {/* RIGHT: Primary Actions */}
