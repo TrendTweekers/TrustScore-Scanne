@@ -140,6 +140,12 @@ router.get('/competitors', async (req, res) => {
 // GET /api/dashboard
 router.get('/dashboard', async (req, res) => {
   console.log("HIT /api/dashboard | shop:", req.query.shop || req.headers['x-shopify-shop-domain']);
+  
+  // Cache busting headers
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   try {
     const session = res.locals.shopify.session;
     const history = await getScanHistory(session.shop);
