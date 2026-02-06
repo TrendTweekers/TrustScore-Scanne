@@ -210,7 +210,16 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
         shopData.ai_usage_count = 0; 
     }
 
+    console.log("=== SCAN BILLING CHECK ===");
+    console.log("User Plan:", userPlan);
+    console.log("Shop Data:", shopData);
+    console.log("Should run AI?", userPlan === 'PRO' || userPlan === 'PLUS');
+
     if (userPlan === 'PRO' || userPlan === 'PLUS') {
+        console.log("=== ENTERING AI ANALYSIS BLOCK ===");
+        console.log("ANTHROPIC_API_KEY exists:", !!process.env.ANTHROPIC_API_KEY);
+        console.log("AI usage count:", shopData.ai_usage_count);
+
         if (userPlan === 'PRO' && (shopData.ai_usage_count || 0) >= 10) {
              aiLimitReached = true;
              console.log(`AI limit reached for ${session.shop} (Pro: ${shopData.ai_usage_count || 0}/10)`);
