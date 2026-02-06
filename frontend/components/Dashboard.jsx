@@ -3,7 +3,8 @@ import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge
 import { CheckCircleIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
-import { track } from '../utils/analytics';
+import { trackEvent } from '../utils/analytics';
+import logo from '../assets/trustscore-logo.svg';
 import TrustScore from './TrustScore';
 import ScoreInfo from './ScoreInfo';
 import { OnboardingModal } from './OnboardingModal';
@@ -132,7 +133,7 @@ function Dashboard() {
 
   if (!dashboardData) {
       return (
-          <Page title="TrustScore Scanner">
+          <Page title="Dashboard">
               <Layout>
                   <Layout.Section>
                       <Card>
@@ -162,10 +163,10 @@ function Dashboard() {
 
   return (
     <Page 
-        title="TrustScore Dashboard" 
+        title="Dashboard" 
         primaryAction={
             <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
-                {scanCount === 0 ? 'Scan Store (60 seconds)' : 'Run New Scan'}
+                {scanCount === 0 ? 'Run Trust Audit (60 seconds)' : 'Run Trust Audit'}
             </Button>
         }
     >
@@ -202,7 +203,7 @@ function Dashboard() {
                 {/* Alerts */}
                 {scanError && scanError !== 'upgrade_required' && (
                     <Layout.Section>
-                        <Banner tone="critical" title="Scan Failed">
+                        <Banner tone="critical" title="Trust Audit Failed">
                             {scanError}
                         </Banner>
                     </Layout.Section>
@@ -211,7 +212,7 @@ function Dashboard() {
                 {trend < 0 && (
                     <Layout.Section>
                         <Banner tone="critical" title="Trust Score Dropped">
-                            Your score dropped by {Math.abs(trend)} points since the last scan. Check the recommendations.
+                            Your score dropped by {Math.abs(trend)} points since the last audit. Check the recommendations.
                         </Banner>
                     </Layout.Section>
                 )}
@@ -230,7 +231,7 @@ function Dashboard() {
                                 onAction: () => handleUpgrade('PLUS'),
                             }}
                         >
-                            <p>You have used your free scan. Unlock unlimited scans and weekly monitoring.</p>
+                            <p>You have used your free audit. Unlock unlimited audits and weekly monitoring.</p>
                         </CalloutCard>
                      </Layout.Section>
                 )}
@@ -239,8 +240,8 @@ function Dashboard() {
                 <Layout.Section>
                     <Box paddingBlockEnd="400">
                         <InlineGrid columns="auto auto" gap="300" alignItems="center">
-                            <img src="/assets/trustscore-logo.svg" alt="TrustScore Logo" style={{ width: '32px', height: '32px' }} />
-                            <Text variant="headingLg" as="h1">TrustScore Scanner</Text>
+                            <img src={logo} alt="TrustScore Logo" style={{ width: '32px', height: '32px' }} />
+                            <Text variant="headingLg" as="h1">TrustScore</Text>
                         </InlineGrid>
                     </Box>
                     <Card>
@@ -259,7 +260,7 @@ function Dashboard() {
                             <BlockStack gap="200">
                                 <Text tone="subdued">Plan Usage</Text>
                                 <Badge tone={isFree ? 'attention' : 'success'}>{plan}</Badge>
-                                <Text variant="bodySm">{scanCount} scans run</Text>
+                                <Text variant="bodySm">{scanCount} audits run</Text>
                                 {plan === 'PRO' && (
                                      <Text variant="bodySm" tone={aiUsage >= 10 ? 'critical' : 'subdued'}>
                                          {aiUsage}/10 AI analyses used
@@ -282,7 +283,7 @@ function Dashboard() {
                              <BlockStack gap="500" align="center">
                                  <BlockStack gap="200" align="center">
                                     <Spinner size="large" />
-                                    <Text variant="headingLg">Analyzing your store...</Text>
+                                    <Text variant="headingLg">Running Trust Audit...</Text>
                                  </BlockStack>
                                  
                                  <Box width="100%" maxWidth="400px">

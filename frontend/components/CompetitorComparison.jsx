@@ -66,7 +66,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
               <BlockStack gap="400">
                   <Text variant="headingMd">Competitor Analysis</Text>
                   <Banner tone="info" title="Pro Feature">
-                      Upgrade to Pro to scan competitor stores and see how you stack up.
+                      Upgrade to Pro to audit competitor stores and see how you stack up.
                   </Banner>
               </BlockStack>
           </Card>
@@ -80,7 +80,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                 <Text variant="headingMd">Competitor Analysis</Text>
                 <Text as="p">
                     Compare your trust score against any competitor. 
-                    <Text as="span" tone="subdued"> ({scans.length}/{limit} scans used)</Text>
+                    <Text as="span" tone="subdued"> ({scans.length}/{limit} audits used)</Text>
                 </Text>
 
                 <InlineGrid columns={['twoThirds', 'oneThird']} gap="400" alignItems="end">
@@ -98,7 +98,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                         loading={loading}
                         disabled={!url || loading || scans.length >= limit}
                     >
-                        Scan Competitor
+                        Run Competitor Audit
                     </Button>
                 </InlineGrid>
 
@@ -112,7 +112,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
              <Card>
                  <BlockStack gap="400" align="center">
                      <Spinner size="large" />
-                     <Text>Analyzing competitor store...</Text>
+                     <Text>Running Competitor Audit...</Text>
                  </BlockStack>
              </Card>
         )}
@@ -123,7 +123,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                     <Text variant="headingLg" as="h3">Comparison Result</Text>
                     
                     {!selectedScan.score ? (
-                        <Banner tone="warning">Invalid scan data. Please try again.</Banner>
+                        <Banner tone="warning">Invalid audit data. Please try again.</Banner>
                     ) : (
                     <>
                     {/* TRUST GAP CARD */}
@@ -229,7 +229,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                                     </Box>
                                 );
                             }
-                            return <Text tone="subdued">No detailed AI insights available for this scan.</Text>;
+                            return <Text tone="subdued">No detailed AI insights available for this audit.</Text>;
                         })()}
                     </BlockStack>
                     </>
@@ -241,7 +241,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
         {scans.length > 0 && (
             <Card>
                 <BlockStack gap="400">
-                    <Text variant="headingMd">Scan History</Text>
+                    <Text variant="headingMd">Audit History</Text>
                     <List>
                         {scans.map((scan, i) => (
                             <List.Item key={i}>

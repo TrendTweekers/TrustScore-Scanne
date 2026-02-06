@@ -16,13 +16,13 @@ export function FAQ() {
             <List.Item>
                 <BlockStack gap="100">
                     <Text fontWeight="bold">Does this change my theme?</Text>
-                    <Text tone="subdued">No. TrustScore Scanner only reads your public store pages. We do not modify your theme code.</Text>
+                    <Text tone="subdued">No. TrustScore only reads your public store pages. We do not modify your theme code.</Text>
                 </BlockStack>
             </List.Item>
             <List.Item>
                 <BlockStack gap="100">
-                    <Text fontWeight="bold">How often should I scan?</Text>
-                    <Text tone="subdued">We recommend scanning whenever you make design changes or add new products. Pro members get weekly auto-scans.</Text>
+                    <Text fontWeight="bold">How often should I run an audit?</Text>
+                    <Text tone="subdued">We recommend running an audit whenever you make design changes or add new products. Pro members get weekly auto-audits.</Text>
                 </BlockStack>
             </List.Item>
             <List.Item>

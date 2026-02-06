@@ -43,7 +43,7 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
       onClose={onClose}
       title={step === 1 ? "Welcome to TrustScore!" : step === 2 ? "Customize Your Audit" : step === 3 ? "How it Works" : "Ready to Audit"}
       primaryAction={{
-        content: step === 4 ? 'Scan Store (60 seconds)' : 'Next',
+        content: step === 4 ? 'Run Trust Audit (60 seconds)' : 'Next',
         onAction: handleNext,
         disabled: step === 2 && !revenue
       }}
@@ -62,7 +62,7 @@ export function OnboardingModal({ open, onClose, onStartScan }) {
                 Stores fixing trust signals see 15-30% conversion lifts
               </Text>
               <Text as="p">
-                Hi there! 👋 Welcome to TrustScore Scanner. We're here to help you turn more visitors into buyers by fixing "trust issues" on your store.
+                Hi there! 👋 Welcome to TrustScore. We're here to help you turn more visitors into buyers by fixing "trust issues" on your store.
               </Text>
               <Text as="p">
                 Did you know that <strong>98% of visitors leave without buying</strong>? Often, it's because they don't trust the site enough to enter their credit card info.

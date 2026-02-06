@@ -138,7 +138,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
               {/* Score Anxiety Reduction */}
               <Box background="bg-surface-info" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-emphasis-info">
                   <Text variant="bodySm" tone="subdued">
-                      Most new or unoptimized Shopify stores score between 15–35 on their first scan. 
+                      Most new or unoptimized Shopify stores score between 15–35 on their first audit. 
                       Scores typically improve quickly after fixing the highest-impact trust issues.
                   </Text>
               </Box>
@@ -217,7 +217,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
 
                    <BlockStack gap="200">
                       <Text fontWeight="bold">Assessment</Text>
-                      <Text as="p">{data.aiAnalysis?.assessment || 'Analysis will appear here after your next scan.'}</Text>
+                      <Text as="p">{data.aiAnalysis?.assessment || 'Analysis will appear here after your next audit.'}</Text>
                    </BlockStack>
 
                    <BlockStack gap="200">

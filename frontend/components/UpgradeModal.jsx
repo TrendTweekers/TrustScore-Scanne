@@ -7,7 +7,7 @@ export function UpgradeModal({ open, onClose, onUpgrade }) {
       name: 'Pro',
       price: '$19',
       features: [
-        'Unlimited Scans',
+        'Unlimited Audits',
         '10 AI Analyses/mo',
         'Weekly Monitoring',
         'Priority Support'
@@ -42,7 +42,7 @@ export function UpgradeModal({ open, onClose, onUpgrade }) {
       <Modal.Section>
         <BlockStack gap="400">
           <Text as="p">
-            Unlock the full potential of TrustScore Scanner with our premium plans.
+            Unlock the full potential of TrustScore with our premium plans.
           </Text>
             
           <InlineGrid columns={2} gap="400">
