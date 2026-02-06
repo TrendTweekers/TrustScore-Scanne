@@ -64,7 +64,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
       return (
           <Card>
               <BlockStack gap="400">
-                  <Text variant="headingMd">Competitive Trust Intelligence</Text>
+                  <Text variant="headingMd">Trust Gap Analysis</Text>
                   <Banner tone="info" title="Pro Feature">
                       Upgrade to Pro to audit competitor stores and see how you stack up.
                   </Banner>
@@ -74,10 +74,10 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
   }
 
   return (
-    <BlockStack gap="500">
+    <BlockStack gap="800">
         <Card>
             <BlockStack gap="400">
-                <Text variant="headingMd">Competitive Trust Intelligence</Text>
+                <Text variant="headingMd">Trust Gap Analysis</Text>
                 <Text as="p">
                     Compare your trust score against any competitor. 
                     <Text as="span" tone="subdued"> ({scans.length}/{limit} audits used)</Text>
@@ -132,18 +132,28 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                         const isLosing = gap > 0;
                         const gapValue = Math.abs(gap);
                         
-                        if (isLosing) {
+                        if (gap > 25) {
                             return (
                                 <Box background="bg-surface-critical" padding="500" borderRadius="200" borderWidth="1" borderColor="border-critical">
                                     <BlockStack gap="200" align="center">
                                         <Text variant="headingXl" tone="critical">
-                                            TRUST GAP: +{gapValue} POINTS
+                                            CRITICAL GAP: {gapValue} POINTS
                                         </Text>
-                                        <Text variant="bodyMd" fontWeight="bold">
+                                        <Text variant="bodyLg" fontWeight="bold" tone="critical">
+                                            ⚠️ You are losing ~14% market share to this competitor due to lower Trust.
+                                        </Text>
+                                    </BlockStack>
+                                </Box>
+                            );
+                        } else if (isLosing) {
+                            return (
+                                <Box background="bg-surface-warning" padding="500" borderRadius="200" borderWidth="1" borderColor="border-warning">
+                                    <BlockStack gap="200" align="center">
+                                        <Text variant="headingLg" tone="caution">
+                                            Trust Gap: {gapValue} Points
+                                        </Text>
+                                        <Text variant="bodyMd">
                                             Your store: {myLatestScore} | Competitor: {selectedScan.score}
-                                        </Text>
-                                        <Text tone="critical" fontWeight="bold">
-                                            👉 Stores with this gap typically convert 18–35% worse.
                                         </Text>
                                     </BlockStack>
                                 </Box>

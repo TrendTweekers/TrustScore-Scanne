@@ -20,7 +20,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
   console.log("PLAN:", plan);
   
   const [selectedTab, setSelectedTab] = useState(0);
-  const [showQuickWins, setShowQuickWins] = useState(false);
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
 
   const handleTabChange = useCallback(
     (selectedTabIndex) => setSelectedTab(selectedTabIndex),
@@ -107,15 +107,12 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
           return 'At Risk';
       };
 
-      const filteredRecommendations = showQuickWins 
-        ? recommendations.filter(rec => {
-            const meta = getFixMetadata(rec.issue);
-            return meta.difficulty === 'Easy' || meta.impact === 'High';
-        }).slice(0, 3)
-        : recommendations;
+      const displayedRecommendations = showAllRecommendations 
+        ? recommendations
+        : recommendations.slice(0, 3);
 
       return (
-        <BlockStack gap="500">
+        <BlockStack gap="800">
           {type === 'product' && rawData && (
              <Card>
                 <BlockStack gap="200">
@@ -131,90 +128,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
              </Card>
           )}
 
-          <Card>
-            <BlockStack gap="400" align="center">
-              <Text variant="headingLg" as="h2">{type === 'homepage' ? 'Homepage' : 'Product Page'} Trust Score</Text>
-              
-              {/* Gauge Visualization */}
-              <Box height="180px" width="100%" position="relative">
-                 <ResponsiveContainer width="100%" height="100%">
-                     <PieChart>
-                         <Pie
-                             data={[{ value: score }, { value: 100 - score }]}
-                             cx="50%"
-                             cy="100%"
-                             startAngle={180}
-                             endAngle={0}
-                             innerRadius={80}
-                             outerRadius={110}
-                             paddingAngle={0}
-                             dataKey="value"
-                             stroke="none"
-                         >
-                             <Cell fill={getGaugeColor(score)} />
-                             <Cell fill="#E1E3E5" />
-                         </Pie>
-                     </PieChart>
-                 </ResponsiveContainer>
-                 <div style={{
-                     position: 'absolute',
-                     bottom: '0',
-                     left: '50%',
-                     transform: 'translateX(-50%)',
-                     textAlign: 'center',
-                     marginBottom: '10px'
-                 }}>
-                     <Text variant="heading3xl" as="p">{score}</Text>
-                     <Text variant="bodySm" tone="subdued">/100</Text>
-                 </div>
-              </Box>
-
-              <BlockStack gap="200" align="center">
-                  <Badge tone={score >= 70 ? 'success' : score >= 40 ? 'attention' : 'critical'}>
-                      Trust Tier: {getTrustTier(score)}
-                  </Badge>
-                  <Text tone="subdued" variant="bodySm">Top Shopify stores average 70+ TrustScore.</Text>
-              </BlockStack>
-
-              <Divider />
-
-              <InlineGrid columns={3} gap="400">
-                <BlockStack gap="100">
-                  <Text variant="bodySm" tone="subdued">Your Score</Text>
-                  <Text variant="headingMd">{score}/100</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text variant="bodySm" tone="subdued">Industry Avg</Text>
-                  <Text variant="headingMd">62/100</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text variant="bodySm" tone="subdued">Top Performers</Text>
-                  <Text variant="headingMd">85+/100</Text>
-                </BlockStack>
-              </InlineGrid>
-
-              {/* Revenue Risk Indicator */}
-              {score < 50 && (
-                  <Box background="bg-surface-warning" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-warning" width="100%">
-                      <BlockStack gap="200">
-                           <Text fontWeight="bold" tone="caution">⭐ Revenue Risk Indicator</Text>
-                           <Text variant="bodySm">
-                               ⚠️ Stores scoring below 40 often struggle with conversion trust.
-                               Fixing the top 3 issues typically produces the fastest gains.
-                           </Text>
-                      </BlockStack>
-                  </Box>
-              )}
-
-              {/* Score Anxiety Reduction */}
-              <Box background="bg-surface-info" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-emphasis-info" width="100%">
-                  <Text variant="bodySm" tone="subdued">
-                      Most new or unoptimized Shopify stores score between 15–35 on their first audit. 
-                      Scores typically improve quickly after fixing the highest-impact trust issues.
-                  </Text>
-              </Box>
-            </BlockStack>
-          </Card>
+          {/* Score Card Removed - Unified Hero in Dashboard handles this */}
 
           {/* AI Analysis Section (Pro/Plus Only) */}
           {plan === 'FREE' ? (
@@ -236,21 +150,22 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                     }}
                  >
                     <Card>
-                       <BlockStack gap="400">
-                          <InlineGrid columns="auto auto" gap="200" alignItems="center">
-                              <Icon source={InfoIcon} tone="subdued" />
-                              <Text variant="headingMd" as="h3" tone="subdued">🔒 AI Conversion Intelligence</Text>
-                          </InlineGrid>
-                          <Banner tone="info">
+                       <Box background="bg-surface-secondary" padding="500" borderRadius="300">
+                           <BlockStack gap="400">
+                              <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                  <Text variant="headingMd" as="h3">🔒 AI Conversion Intelligence</Text>
+                                  <Badge tone="magic">Premium</Badge>
+                              </InlineGrid>
+                              
                               <BlockStack gap="300">
-                                  <Text as="p" fontWeight="bold">Unlock AI Intelligence</Text>
-                                  <Text as="p">
+                                  <Text as="p" fontWeight="bold">Unlock Deep Insights</Text>
+                                  <Text as="p" tone="subdued">
                                       See exactly why visitors don't trust your store. 
                                       Discover hidden friction hurting checkout rate. 
                                       Get prioritized, revenue-weighted fixes.
                                   </Text>
                                   <Box>
-                                      <Button variant="primary" onClick={(e) => {
+                                      <Button variant="primary" size="large" onClick={(e) => {
                                           e.stopPropagation();
                                           trackEvent('upgrade_clicked', { from_plan: plan, source: 'ai_gating_button' });
                                           onUpgrade();
@@ -259,8 +174,8 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                                       </Button>
                                   </Box>
                               </BlockStack>
-                          </Banner>
-                       </BlockStack>
+                           </BlockStack>
+                       </Box>
                     </Card>
                  </div>
              )
@@ -341,24 +256,20 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
           <Card>
             <div id="recommendations-section">
                 <BlockStack gap="400">
-                  <InlineGrid columns="auto auto" gap="400" alignItems="center">
-                      <Text variant="headingMd" as="h3">Recommendations</Text>
-                      <Button 
-                        size="slim" 
-                        variant={showQuickWins ? "primary" : "secondary"}
-                        onClick={() => setShowQuickWins(!showQuickWins)}
-                      >
-                        {showQuickWins ? "Show All" : "👉 Show me the fastest way to gain +10 points"}
-                      </Button>
-                  </InlineGrid>
-                  
-                  <Text variant="bodySm" tone="subdued">Most stores fix their top trust issues in under 45 minutes.</Text>
+                  {/* Progress Psychology Microcopy */}
+                  <Box background="bg-surface-success" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-success">
+                      <Text variant="bodySm" fontWeight="bold" tone="success">
+                          🚀 TrustScore improves FAST. Most stores reach 60+ within 7 days.
+                      </Text>
+                  </Box>
+
+                  <Text variant="headingMd" as="h3">🔥 Fix These First (Highest Revenue Impact)</Text>
     
                   {recommendations.length === 0 ? (
                     <Banner tone="success">Great job! No critical issues found.</Banner>
                   ) : (
                     <BlockStack gap="300">
-                      {filteredRecommendations.map((rec, index) => {
+                      {displayedRecommendations.map((rec, index) => {
                         const meta = getFixMetadata(rec.issue);
                         return (
                         <Banner key={index} tone={getPriorityColor(rec.priority)}>
@@ -404,6 +315,16 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                           </BlockStack>
                         </Banner>
                       )})}
+
+                      {recommendations.length > 3 && (
+                          <Button 
+                              fullWidth 
+                              variant="plain" 
+                              onClick={() => setShowAllRecommendations(!showAllRecommendations)}
+                          >
+                              {showAllRecommendations ? "Show Less" : `👉 View All ${recommendations.length} Recommendations`}
+                          </Button>
+                      )}
                     </BlockStack>
                   )}
                 </BlockStack>
@@ -460,7 +381,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
   }
 
   return (
-    <BlockStack gap="500">
+    <BlockStack gap="800">
         <Tabs tabs={tabs} selected={selectedTab} onSelect={handleTabChange}>
            <Box paddingBlockStart="400">
              {selectedTab === 0 ? renderAnalysis(result.homepage, 'homepage') : renderAnalysis(result.productPage, 'product')}

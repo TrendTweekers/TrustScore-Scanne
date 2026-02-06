@@ -191,24 +191,63 @@ function Dashboard() {
 
         {selectedTab === 0 ? (
             <>
-                {/* Hero Insight Card */}
-                {!loading && scanResult && (
-                    <Layout.Section>
-                        <CalloutCard
-                            title="Revenue Opportunity Detected"
-                            illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
-                            primaryAction={{
-                                content: 'Fix Top Issues',
-                                onAction: () => {
-                                    const el = document.getElementById('recommendations-section');
-                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                },
-                            }}
-                        >
-                            <p>Your store may be losing significant conversions due to missing trust signals. Fixing the top issues typically delivers the fastest revenue lift.</p>
-                        </CalloutCard>
-                    </Layout.Section>
-                )}
+                {/* Unified Hero Section */}
+                <Layout.Section>
+                    <Card padding="0">
+                        <Box padding="600" background="bg-surface-secondary">
+                            <InlineGrid columns={['twoThirds', 'oneThird']} gap="600" alignItems="center">
+                                {/* LEFT: Score & Trust Tier */}
+                                <BlockStack gap="400">
+                                    <InlineGrid columns="auto auto" gap="400" alignItems="center">
+                                        <Text variant="heading4xl" as="h1" fontWeight="bold">
+                                            {currentScore}/100
+                                        </Text>
+                                        <BlockStack gap="100">
+                                            <Badge tone={currentScore >= 70 ? 'success' : currentScore >= 40 ? 'attention' : 'critical'} size="large">
+                                                Trust Tier: {currentScore >= 85 ? 'Elite' : currentScore >= 70 ? 'Trusted' : currentScore >= 40 ? 'Needs Optimization' : 'At Risk'}
+                                            </Badge>
+                                            {currentScore < 70 && (
+                                                <Text tone="critical" fontWeight="bold">
+                                                    ⚠️ Stores at this level typically lose 15–35% of potential conversions.
+                                                </Text>
+                                            )}
+                                        </BlockStack>
+                                    </InlineGrid>
+
+                                    {/* Revenue Estimator */}
+                                    <Box background="bg-surface" padding="300" borderRadius="200" width="fit-content">
+                                        <BlockStack gap="100">
+                                            <Text tone="subdued" variant="bodySm">Estimated Revenue Being Lost</Text>
+                                            <Text variant="headingMd" tone="success">
+                                                ${(100 - currentScore) * 50} – ${(100 - currentScore) * 150} / month
+                                            </Text>
+                                        </BlockStack>
+                                    </Box>
+
+                                    {/* Stat Chips */}
+                                    <InlineGrid columns="auto auto auto" gap="300">
+                                        <Badge tone="info">Last audit: {lastScannedText}</Badge>
+                                        <Badge tone={trend >= 0 ? 'success' : 'critical'}>Trend: {trend > 0 ? '+' : ''}{trend}</Badge>
+                                        <Badge tone={isFree ? 'attention' : 'success'}>Plan: {plan}</Badge>
+                                    </InlineGrid>
+                                </BlockStack>
+
+                                {/* RIGHT: Primary Actions */}
+                                <BlockStack gap="300" align="end">
+                                    <Button variant="primary" size="large" onClick={handleScan} disabled={loading} loading={loading}>
+                                        Run Trust Audit
+                                    </Button>
+                                    <Button variant="plain" onClick={() => {
+                                        const el = document.getElementById('recommendations-section');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    }}>
+                                        View Fixes
+                                    </Button>
+                                </BlockStack>
+                            </InlineGrid>
+                        </Box>
+                    </Card>
+                </Layout.Section>
 
                 {/* Success Banner */}
                 {showSuccessBanner && (
@@ -255,41 +294,8 @@ function Dashboard() {
                      </Layout.Section>
                 )}
 
-                {/* Stats Overview */}
-                <Layout.Section>
-                    <Box paddingBlockEnd="400">
-                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
-                            <img src={logo} alt="TrustScore Logo" style={{ width: '32px', height: '32px' }} />
-                            <Text variant="headingLg" as="h1">TrustScore</Text>
-                        </InlineGrid>
-                    </Box>
-                    <Card>
-                        <InlineGrid columns={3} gap="400">
-                            <BlockStack gap="200">
-                                <Text tone="subdued">Current Score</Text>
-                                <Text variant="heading3xl" as="h2">{currentScore}/100</Text>
-                                {lastScannedText && <Text tone="subdued" variant="bodySm">Last scanned: {lastScannedText}</Text>}
-                            </BlockStack>
-                            <BlockStack gap="200">
-                                <Text tone="subdued">Trend</Text>
-                                <Text variant="headingLg" tone={trend >= 0 ? 'success' : 'critical'}>
-                                    {trend > 0 ? '+' : ''}{trend} points
-                                </Text>
-                            </BlockStack>
-                            <BlockStack gap="200">
-                                <Text tone="subdued">Plan Usage</Text>
-                                <Badge tone={isFree ? 'attention' : 'success'}>{plan}</Badge>
-                                <Text variant="bodySm">{scanCount} audits run</Text>
-                                {plan === 'PRO' && (
-                                     <Text variant="bodySm" tone={aiUsage >= 10 ? 'critical' : 'subdued'}>
-                                         {aiUsage}/10 AI analyses used
-                                     </Text>
-                                )}
-                            </BlockStack>
-                        </InlineGrid>
-                    </Card>
-                </Layout.Section>
-
+                {/* Stats Overview REMOVED - Merged into Hero */}
+                
                 {/* Score Chart */}
                 <Layout.Section>
                     <ScoreChart />
