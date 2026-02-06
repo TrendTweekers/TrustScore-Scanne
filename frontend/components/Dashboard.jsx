@@ -5,7 +5,7 @@ import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
 import { calculateRevenueEstimate } from '../utils/revenueEstimate';
-import logo from '../assets/trustscore-logo.svg';
+import { BrandLogo } from './BrandLogo';
 import TrustScore from './TrustScore';
 import ScoreInfo from './ScoreInfo';
 import { OnboardingModal } from './OnboardingModal';
@@ -168,8 +168,9 @@ function Dashboard() {
 
   return (
     <Page 
-        title="Dashboard" 
+        title="TrustScore" 
         primaryAction={
+            selectedTab === 0 && 
             <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
                 {scanCount === 0 ? 'Run Trust Audit (60 seconds)' : 'Run Trust Audit'}
             </Button>
@@ -226,13 +227,10 @@ function Dashboard() {
                                 {/* LEFT: Score & Trust Tier */}
                                 <BlockStack gap="400">
                                     {/* Branding Header */}
-                                    <InlineGrid columns="auto auto" gap="200" alignItems="center">
-                                         <img src={logo} alt="TrustScore" style={{height: '24px'}} />
-                                         <Text variant="headingSm" tone="subdued">TrustScore</Text>
-                                    </InlineGrid>
+                                    <BrandLogo size={24} />
 
                                     <InlineGrid columns="auto auto" gap="400" alignItems="center">
-                                        <Text variant="heading4xl" as="h1" fontWeight="bold">
+                                        <Text variant="heading4xl" as="p" fontWeight="bold">
                                             {currentScore}/100
                                         </Text>
                                         <BlockStack gap="100">
@@ -424,12 +422,14 @@ function Dashboard() {
                 </Layout.Section>
             </>
         ) : selectedTab === 1 ? (
-             <Layout.Section>
-                 <CompetitorComparison 
+            <Layout.Section>
+                <CompetitorComparison 
                     userPlan={plan} 
                     myLatestScore={currentScore} 
-                 />
-             </Layout.Section>
+                    shopData={shopData} 
+                    myLatestScan={scanResult || dashboardData.latestScan}
+                />
+            </Layout.Section>
         ) : (
             <Layout.Section>
                 <FAQ />

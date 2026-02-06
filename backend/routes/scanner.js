@@ -140,6 +140,40 @@ router.post('/scanner/external', checkBillingMiddleware, async (req, res) => {
         // 3. Run Analysis
         const puppeteerResult = await takeScreenshots(targetUrl);
         
+        // --- Sanity Checks ---
+        const html = puppeteerResult.html || "";
+        const lowerHtml = html.toLowerCase();
+        
+        // Bot protection check
+        const botMarkers = [
+            'captcha', 
+            'cf-chl', 
+            'cloudflare', 
+            'challenge-platform', 
+            'access denied', 
+            'security check',
+            'verify you are human',
+            'just a moment...'
+        ];
+        
+        if (botMarkers.some(m => lowerHtml.includes(m))) {
+             return res.status(422).json({ 
+                ok: false, 
+                error: 'BOT_PROTECTION',
+                message: 'We couldn’t analyze this site because it blocks automated scanning. Try another competitor or run the audit on your own store.' 
+            });
+        }
+        
+        // Length check (too small = likely error or password page)
+        // User suggested < 10k. We'll use 3000 chars as a conservative floor for a real storefront.
+        if (html.length < 3000) {
+             return res.status(422).json({ 
+                ok: false, 
+                error: 'TOO_SMALL',
+                message: 'The page content is too short to analyze. It might be a password page or empty.' 
+            });
+        }
+
         // Competitor analysis always includes AI for deeper insights if plan allows, 
         // but let's stick to the same logic: Pro/Plus gets AI.
         // Since this is a Pro/Plus feature only, we ALWAYS run AI.

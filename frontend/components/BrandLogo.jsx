@@ -1,0 +1,21 @@
+import React from 'react';
+import { Box, InlineGrid, Text } from '@shopify/polaris';
+
+export function BrandLogo({ size = 28, withWordmark = true, text = "TrustScore" }) {
+  return (
+    <InlineGrid columns="auto auto" gap="200" alignItems="center">
+      <Box minWidth={`${size}px`}>
+        <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 0L3.4641 9.54915V28.6474L20 38.1966L36.5359 28.6474V9.54915L20 0Z" fill="#2C6ECB"/>
+          <path d="M20 4L7 11.5V26.5L20 34L33 26.5V11.5L20 4Z" fill="white"/>
+          <path d="M18 11L18 19L12 19L12 21L18 21L18 29L20 29L20 21L28 21L28 19L20 19L20 11L18 11Z" fill="#2C6ECB"/>
+          <circle cx="25" cy="25" r="8" stroke="#202123" strokeWidth="3" fill="none"/>
+          <line x1="29" y1="29" x2="35" y2="35" stroke="#202123" strokeWidth="3" strokeLinecap="round"/>
+        </svg>
+      </Box>
+      {withWordmark && (
+        <Text variant="headingSm" tone="subdued">{text}</Text>
+      )}
+    </InlineGrid>
+  );
+}

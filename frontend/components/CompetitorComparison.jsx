@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Text, TextField, Button, BlockStack, InlineGrid, Banner, List, Box, ProgressBar, Divider, Spinner } from '@shopify/polaris';
+import { Card, Text, TextField, Button, BlockStack, InlineGrid, Banner, List, Box, ProgressBar, Divider, Spinner, Link, Badge } from '@shopify/polaris';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
+import { trackEvent } from '../utils/analytics';
 
-export function CompetitorComparison({ userPlan, myLatestScore }) {
+export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLatestScan }) {
   const fetch = useAuthenticatedFetch();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,16 +37,47 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
     setError(null);
     setSelectedScan(null);
 
+    // Validate URL
+    let cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('http')) {
+        cleanUrl = 'https://' + cleanUrl;
+    }
+
     try {
+        const urlObj = new URL(cleanUrl);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // Block list
+        const blockedDomains = ['shopify.com', 'www.shopify.com', 'help.shopify.com', 'partners.shopify.com', 'admin.shopify.com', 'apps.shopify.com', 'community.shopify.com'];
+        if (blockedDomains.includes(hostname)) {
+             const msg = "Please enter a real Shopify storefront domain (e.g. brand.com). Avoid shopify.com marketing or admin sites.";
+             setError(msg);
+             setLoading(false);
+             trackEvent('competitor_scan_failed', { reason: 'blocked_domain', url: cleanUrl });
+             return;
+        }
+        
+        // Self-check
+        if (shopData && (shopData.domain === hostname || shopData.myshopify_domain === hostname)) {
+             const msg = "You are scanning your own store. Use the Dashboard to audit your store.";
+             setError(msg);
+             setLoading(false);
+             trackEvent('competitor_scan_failed', { reason: 'self_scan', url: cleanUrl });
+             return;
+        }
+
+        trackEvent('competitor_scan_started', { url: cleanUrl });
+
         const res = await fetch('/api/scanner/external', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url })
+            body: JSON.stringify({ url: cleanUrl })
         });
         
         const data = await res.json();
         
         if (!res.ok) {
+            trackEvent('competitor_scan_failed', { reason: data.error || 'api_error', url: cleanUrl });
             throw new Error(data.message || data.error || 'Scan failed');
         }
 
@@ -53,6 +85,10 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
         setScans([data, ...scans]);
         setSelectedScan(data);
         setUrl('');
+        
+        const gap = data.score - myLatestScore;
+        trackEvent('competitor_scan_completed', { competitor_domain: hostname, gap_points: gap });
+
     } catch (err) {
         setError(err.message);
     } finally {
@@ -204,44 +240,124 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                     
                     <Divider />
 
-                    <BlockStack gap="400">
-                        <Text variant="headingMd">Competitor Insights</Text>
-                        {(() => {
-                            let parsedResult;
-                            const result = selectedScan.result;
-
-                            if (typeof result === 'string') {
-                                try {
-                                    parsedResult = JSON.parse(result);
-                                } catch (e) {
-                                    console.error("JSON Parse Error:", e);
-                                    parsedResult = null;
-                                }
-                            } else {
-                                parsedResult = result;
+                    {(() => {
+                        const parseResult = (r) => {
+                            if (!r) return null;
+                            if (typeof r === 'string') {
+                                try { return JSON.parse(r); } catch(e) { return null; }
                             }
+                            return r;
+                        };
+                        
+                        const myResult = parseResult(myLatestScan?.result);
+                        const compResult = parseResult(selectedScan?.result);
+                        
+                        // Align factors
+                        const myFactors = myResult?.breakdown || [];
+                        const compFactors = compResult?.breakdown || [];
+                        
+                        // Merge by label if we have data, otherwise just show competitor data
+                        // If myFactors is empty (e.g. legacy data), we can't do gap analysis properly
+                        const factors = compFactors.map(f => {
+                            const myF = myFactors.find(m => m.label === f.label) || { score: 0 };
+                            return {
+                                label: f.label,
+                                myScore: myF.score,
+                                compScore: f.score,
+                                max: f.maxScore || 10,
+                                gap: f.score - myF.score // Positive means competitor is better
+                            };
+                        });
+                        
+                        // Top 3 Gap Drivers (where I am losing most)
+                        const drivers = [...factors]
+                            .filter(f => f.gap > 0)
+                            .sort((a, b) => b.gap - a.gap)
+                            .slice(0, 3);
+                            
+                        return (
+                            <BlockStack gap="600">
+                                {/* Top 3 Drivers */}
+                                <Card>
+                                    <BlockStack gap="400">
+                                        <Text variant="headingMd">Top 3 Gap Drivers</Text>
+                                        <Text tone="subdued">The competitor is beating you most in these areas:</Text>
+                                        {drivers.length > 0 ? (
+                                            <List type="number">
+                                                {drivers.map((d, i) => (
+                                                    <List.Item key={i}>
+                                                        <Text fontWeight="bold">{d.label}</Text> (They are +{d.gap} points ahead)
+                                                    </List.Item>
+                                                ))}
+                                            </List>
+                                        ) : (
+                                            <Text tone="success">You are leading or tied in all factors!</Text>
+                                        )}
+                                        
+                                        {drivers.length > 0 && (
+                                            <Banner tone="info">
+                                                 <Text>
+                                                    To close the gap fastest, <Link onClick={() => {
+                                                        const el = document.getElementById('recommendations-section');
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                                    }}>fix these items first</Link>.
+                                                 </Text>
+                                            </Banner>
+                                        )}
+                                    </BlockStack>
+                                </Card>
 
-                            if (!parsedResult) {
-                                return (
-                                    <Banner tone="warning">
-                                        Competitor analysis could not be displayed.
-                                    </Banner>
-                                );
-                            }
-
-                            if (parsedResult.aiAnalysis) {
-                                return (
-                                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                {/* Full Breakdown */}
+                                <Card>
+                                    <BlockStack gap="400">
+                                        <Text variant="headingMd">Trust Gap Breakdown</Text>
                                         <BlockStack gap="200">
-                                            <Text fontWeight="bold">AI Assessment</Text>
-                                            <Text>{parsedResult.aiAnalysis.assessment}</Text>
+                                            <InlineGrid columns={['oneHalf', 'oneQuarter', 'oneQuarter']} gap="200">
+                                                 <Text fontWeight="bold" tone="subdued">Factor</Text>
+                                                 <Text fontWeight="bold" tone="subdued" align="end">You</Text>
+                                                 <Text fontWeight="bold" tone="subdued" align="end">Competitor</Text>
+                                            </InlineGrid>
+                                            <Divider />
+                                            {factors.map((f, i) => (
+                                                <Box key={i} paddingBlockStart="200" paddingBlockEnd="200">
+                                                    <InlineGrid columns={['oneHalf', 'oneQuarter', 'oneQuarter']} gap="200" alignItems="center">
+                                                        <Text>{f.label}</Text>
+                                                        <div style={{textAlign: 'right'}}>
+                                                            <Badge tone={f.myScore >= f.max ? 'success' : f.myScore > f.max/2 ? 'attention' : 'critical'}>
+                                                                {f.myScore}/{f.max}
+                                                            </Badge>
+                                                        </div>
+                                                        <div style={{textAlign: 'right'}}>
+                                                            <Badge tone={f.compScore >= f.max ? 'success' : f.compScore > f.max/2 ? 'attention' : 'critical'}>
+                                                                {f.compScore}/{f.max}
+                                                            </Badge>
+                                                        </div>
+                                                    </InlineGrid>
+                                                </Box>
+                                            ))}
                                         </BlockStack>
-                                    </Box>
-                                );
-                            }
-                            return <Text tone="subdued">No detailed AI insights available for this audit.</Text>;
-                        })()}
-                    </BlockStack>
+                                    </BlockStack>
+                                </Card>
+                                
+                                {/* AI Analysis (Locked or Shown) */}
+                                <Card>
+                                    <BlockStack gap="400">
+                                        <Text variant="headingMd">Competitor Insights (AI)</Text>
+                                        {compResult?.aiAnalysis ? (
+                                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                                <BlockStack gap="200">
+                                                    <Text fontWeight="bold">AI Assessment</Text>
+                                                    <Text>{compResult.aiAnalysis.assessment}</Text>
+                                                </BlockStack>
+                                            </Box>
+                                        ) : (
+                                            <Banner tone="warning">AI analysis not available for this scan.</Banner>
+                                        )}
+                                    </BlockStack>
+                                </Card>
+                            </BlockStack>
+                        );
+                    })()}
                     </>
                     )}
                 </BlockStack>
