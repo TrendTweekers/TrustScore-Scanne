@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppProvider } from '@shopify/polaris';
+import { AppProvider, Frame } from '@shopify/polaris';
 import { Provider as AppBridgeProvider } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 import enTranslations from '@shopify/polaris/locales/en.json';
@@ -18,7 +18,9 @@ function App() {
   return (
     <AppBridgeProvider config={config}>
       <AppProvider i18n={enTranslations}>
-        <Dashboard />
+        <Frame>
+          <Dashboard />
+        </Frame>
       </AppProvider>
     </AppBridgeProvider>
   );

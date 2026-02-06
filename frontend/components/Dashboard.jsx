@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs, Spinner, Icon, Box } from '@shopify/polaris';
-import { CheckCircleIcon } from '@shopify/polaris-icons';
+import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs, Spinner, Icon, Box, Toast } from '@shopify/polaris';
+import { CheckCircleIcon, NotificationIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
@@ -41,6 +41,9 @@ function Dashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
+  const [toastMsg, setToastMsg] = useState(null);
+
+  const toggleToast = useCallback(() => setToastMsg(null), []);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -107,14 +110,17 @@ function Dashboard() {
              setScanError('upgrade_required');
          } else {
              setScanError(data.error || 'Scan failed');
+             setToastMsg('Scan failed: ' + (data.error || 'Unknown error'));
          }
       } else {
          setScanResult(data.result); // Use the full result structure
          loadDashboard(); // Refresh history
+         setToastMsg('Trust Audit Completed! 🎉');
       }
     } catch (error) {
       console.error('Scan error:', error);
       setScanError('Network error');
+      setToastMsg('Network error occurred');
     } finally {
       setLoading(false);
     }
@@ -175,6 +181,13 @@ function Dashboard() {
 
   return (
     <Page title="TrustScore">
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       {selectedTab === 0 && (
         <Box paddingBlockStart="400" paddingBlockEnd="200" paddingInlineStart="400" paddingInlineEnd="400">
            <InlineGrid columns="1fr auto" alignItems="center">
@@ -208,6 +221,7 @@ function Dashboard() {
         onClose={() => setShowUpgradeModal(false)}
         onUpgrade={handleUpgrade}
       />
+      {toastMsg && <Toast content={toastMsg} onDismiss={toggleToast} duration={4000} />}
 
       {selectedTab === 0 && !revenueBracket && (
         <Box paddingInlineStart="400" paddingInlineEnd="400" paddingBlockEnd="400">
@@ -231,7 +245,7 @@ function Dashboard() {
                 <Layout.Section>
                     <Card padding="0">
                         <Box padding="600" background="bg-surface-secondary">
-                            <InlineGrid columns={['twoThirds', 'oneThird']} gap="600" alignItems="center">
+                            <InlineGrid columns={{ xs: 1, md: ['twoThirds', 'oneThird'] }} gap="600" alignItems="center">
                                 {/* LEFT: Score & Trust Tier */}
                                 <BlockStack gap="400">
                                     <InlineGrid columns="auto auto" gap="400" alignItems="center">
@@ -402,6 +416,38 @@ function Dashboard() {
                 {/* Sidebar */}
                 <Layout.Section variant="oneThird">
                      <BlockStack gap="500">
+                         {/* Monitoring & Alerts (New Pro Feature) */}
+                         <Card>
+                            <BlockStack gap="400">
+                                <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                    <Icon source={NotificationIcon} tone="base" />
+                                    <Text variant="headingMd">Monitoring & Alerts</Text>
+                                </InlineGrid>
+                                
+                                <BlockStack gap="300">
+                                     <InlineGrid columns="1fr auto" alignItems="center">
+                                         <BlockStack gap="100">
+                                             <Text fontWeight="bold">Weekly Trust Report</Text>
+                                             <Text tone="subdued" variant="bodySm">Email summary of score changes</Text>
+                                         </BlockStack>
+                                         {isFree ? <Badge tone="subdued">Pro</Badge> : <Badge tone="success">Active</Badge>}
+                                     </InlineGrid>
+                                     
+                                     <InlineGrid columns="1fr auto" alignItems="center">
+                                         <BlockStack gap="100">
+                                             <Text fontWeight="bold">Score Drop Alerts</Text>
+                                             <Text tone="subdued" variant="bodySm">Instant email if score drops 5+</Text>
+                                         </BlockStack>
+                                         {isFree ? <Badge tone="subdued">Pro</Badge> : <Badge tone="success">Active</Badge>}
+                                     </InlineGrid>
+                                     
+                                     {isFree && (
+                                         <Button fullWidth onClick={() => handleUpgrade('PRO')}>Enable Monitoring</Button>
+                                     )}
+                                </BlockStack>
+                            </BlockStack>
+                         </Card>
+
                          <ScoreInfo />
                          <Card>
                             <BlockStack gap="400">

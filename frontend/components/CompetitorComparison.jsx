@@ -98,14 +98,68 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
 
   if (userPlan === 'FREE') {
       return (
-          <Card>
-              <BlockStack gap="400">
-                  <Text variant="headingMd">Trust Gap Analysis</Text>
-                  <Banner tone="info" title="Pro Feature">
-                      Upgrade to Pro to audit competitor stores and see how you stack up.
-                  </Banner>
-              </BlockStack>
-          </Card>
+          <BlockStack gap="800">
+            <Card>
+                <BlockStack gap="400">
+                    <Text variant="headingMd">Trust Gap Analysis</Text>
+                    <Text as="p" tone="subdued">
+                        Compare your trust score against any competitor to see exactly where you're losing customers.
+                    </Text>
+                    
+                    <InlineGrid columns={{ xs: 1, sm: ['twoThirds', 'oneThird'] }} gap="400" alignItems="end">
+                        <TextField 
+                            label="Competitor URL" 
+                            disabled 
+                            placeholder="https://competitor-store.com" 
+                            autoComplete="off"
+                        />
+                        <Button disabled>Run Competitor Audit</Button>
+                    </InlineGrid>
+                </BlockStack>
+            </Card>
+
+            <div style={{ position: 'relative', filter: 'blur(6px)', userSelect: 'none', opacity: 0.6 }}>
+                <Card>
+                    <BlockStack gap="500">
+                        <Text variant="headingLg">Comparison Result</Text>
+                        <Box background="bg-surface-warning" padding="500" borderRadius="200">
+                            <BlockStack gap="200" align="center">
+                                <Text variant="headingLg" tone="caution">Trust Gap: 12 Points</Text>
+                                <Text>Your store: 65 | Competitor: 77</Text>
+                            </BlockStack>
+                        </Box>
+                        <InlineGrid columns={{ xs: 1, sm: 2 }} gap="800">
+                             <BlockStack gap="400">
+                                <Text variant="headingMd">Your Store</Text>
+                                <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                    <Text variant="heading3xl">65/100</Text>
+                                </Box>
+                             </BlockStack>
+                             <BlockStack gap="400">
+                                <Text variant="headingMd">Competitor</Text>
+                                <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                    <Text variant="heading3xl">77/100</Text>
+                                </Box>
+                             </BlockStack>
+                        </InlineGrid>
+                    </BlockStack>
+                </Card>
+            </div>
+            
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10, textAlign: 'center', width: '100%', maxWidth: '400px' }}>
+                <Card>
+                    <BlockStack gap="400" align="center">
+                        <Text variant="headingMd">Unlock Competitive Intelligence</Text>
+                        <Text alignment="center">
+                            See exactly why competitors are beating you. Get a full breakdown of their trust score and copy their winning strategies.
+                        </Text>
+                        <Button variant="primary" onClick={() => window.open('/?billing=upgrade', '_top')}>
+                            Upgrade to Pro to Unlock
+                        </Button>
+                    </BlockStack>
+                </Card>
+            </div>
+          </BlockStack>
       );
   }
 
@@ -119,7 +173,7 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                     <Text as="span" tone="subdued"> ({scans.length}/{limit} audits used)</Text>
                 </Text>
 
-                <InlineGrid columns={['twoThirds', 'oneThird']} gap="400" alignItems="end">
+                <InlineGrid columns={{ xs: 1, sm: ['twoThirds', 'oneThird'] }} gap="400" alignItems="end">
                     <TextField 
                         label="Competitor URL" 
                         value={url} 
@@ -151,6 +205,20 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                      <Text>Running Competitor Audit...</Text>
                  </BlockStack>
              </Card>
+        )}
+
+        {!selectedScan && !loading && scans.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
+                <BlockStack gap="400" align="center">
+                    <div style={{ fontSize: '48px' }}>🕵️‍♂️</div>
+                    <Text variant="headingLg" tone="subdued">No Competitor Audits Yet</Text>
+                    <Text as="p" tone="subdued">
+                        Enter a competitor's URL above to see how their TrustScore compares to yours.
+                        <br />
+                        Find out exactly why they might be converting better.
+                    </Text>
+                </BlockStack>
+            </div>
         )}
 
         {selectedScan && !loading && (
@@ -213,7 +281,7 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                         }
                     })()}
 
-                    <InlineGrid columns={2} gap="800">
+                    <InlineGrid columns={{ xs: 1, sm: 2 }} gap="800">
                         {/* My Store */}
                         <BlockStack gap="400">
                             <Text variant="headingMd">Your Store</Text>
@@ -319,19 +387,22 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                                             </InlineGrid>
                                             <Divider />
                                             {factors.map((f, i) => (
-                                                <Box key={i} paddingBlockStart="200" paddingBlockEnd="200">
-                                                    <InlineGrid columns={['oneHalf', 'oneQuarter', 'oneQuarter']} gap="200" alignItems="center">
-                                                        <Text>{f.label}</Text>
-                                                        <div style={{textAlign: 'right'}}>
-                                                            <Badge tone={f.myScore >= f.max ? 'success' : f.myScore > f.max/2 ? 'attention' : 'critical'}>
-                                                                {f.myScore}/{f.max}
-                                                            </Badge>
-                                                        </div>
-                                                        <div style={{textAlign: 'right'}}>
-                                                            <Badge tone={f.compScore >= f.max ? 'success' : f.compScore > f.max/2 ? 'attention' : 'critical'}>
-                                                                {f.compScore}/{f.max}
-                                                            </Badge>
-                                                        </div>
+                                                <Box key={i} paddingBlockStart="300" paddingBlockEnd="300">
+                                                    <InlineGrid columns={['oneHalf', 'oneQuarter', 'oneQuarter']} gap="400" alignItems="center">
+                                                        <BlockStack gap="100">
+                                                            <Text fontWeight="bold">{f.label}</Text>
+                                                            {f.gap > 0 && <Text tone="critical" variant="bodyXs">-{f.gap} pts gap</Text>}
+                                                        </BlockStack>
+                                                        
+                                                        <BlockStack gap="100" align="end">
+                                                            <Text fontWeight="bold">{f.myScore}/{f.max}</Text>
+                                                            <ProgressBar progress={(f.myScore / f.max) * 100} size="small" tone={f.myScore >= f.max ? 'success' : 'critical'} />
+                                                        </BlockStack>
+                                                        
+                                                        <BlockStack gap="100" align="end">
+                                                            <Text fontWeight="bold">{f.compScore}/{f.max}</Text>
+                                                            <ProgressBar progress={(f.compScore / f.max) * 100} size="small" tone={f.compScore >= f.max ? 'success' : 'critical'} />
+                                                        </BlockStack>
                                                     </InlineGrid>
                                                 </Box>
                                             ))}

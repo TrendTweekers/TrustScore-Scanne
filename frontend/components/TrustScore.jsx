@@ -107,6 +107,34 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
           return 'At Risk';
       };
 
+      const getAutoFixAction = (issueText) => {
+        const text = issueText.toLowerCase();
+        const shopDomain = window.shopOrigin || ''; 
+        const adminUrl = `https://admin.shopify.com/store/${shopDomain.replace('.myshopify.com', '')}`;
+
+        if (text.includes('policy') || text.includes('refund') || text.includes('return')) {
+            return { label: 'Edit Policies', url: `${adminUrl}/settings/legal`, external: true };
+        }
+        if (text.includes('page') || text.includes('about') || text.includes('contact')) {
+            return { label: 'Manage Pages', url: `${adminUrl}/pages`, external: true };
+        }
+        if (text.includes('navigation') || text.includes('menu') || text.includes('link')) {
+            return { label: 'Edit Navigation', url: `${adminUrl}/menus`, external: true };
+        }
+        if (text.includes('product') || text.includes('description')) {
+            return { label: 'Edit Products', url: `${adminUrl}/products`, external: true };
+        }
+        if (text.includes('app') || text.includes('review') || text.includes('chat') || text.includes('badge')) {
+            const query = text.includes('review') ? 'reviews' : text.includes('chat') ? 'chat' : 'trust badges';
+            return { label: `Find ${query} App`, url: `https://apps.shopify.com/search?q=${query}`, external: true };
+        }
+        if (text.includes('speed') || text.includes('image')) {
+             return { label: 'Optimize Theme', url: `${adminUrl}/themes`, external: true };
+        }
+        
+        return null;
+      };
+
       const displayedRecommendations = showAllRecommendations 
         ? recommendations
         : recommendations.slice(0, 3);
@@ -271,12 +299,17 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                     <BlockStack gap="300">
                       {displayedRecommendations.map((rec, index) => {
                         const meta = getFixMetadata(rec.issue);
+                        const autoFix = getAutoFixAction(rec.issue);
+                        
                         return (
                         <Banner key={index} tone={getPriorityColor(rec.priority)}>
                           <BlockStack gap="200">
-                            <Text fontWeight="bold" as="h3">
-                              [{rec.priority ? rec.priority.toUpperCase() : 'MEDIUM'}] {rec.issue}
-                            </Text>
+                            <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                <Text fontWeight="bold" as="h3">
+                                  [{rec.priority ? rec.priority.toUpperCase() : 'MEDIUM'}] {rec.issue}
+                                </Text>
+                                {isPro && <Badge tone="info">Pro Insight</Badge>}
+                            </InlineGrid>
                             
                             {/* Fix Difficulty Tags */}
                             <InlineGrid columns={3} gap="400">
@@ -297,6 +330,18 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                             <Box paddingBlockStart="200">
                               <Text fontWeight="bold">How to fix:</Text>
                               <Text as="p" style={{ whiteSpace: 'pre-line' }}>{rec.howToFix}</Text>
+                              
+                              {autoFix && (
+                                  <Box paddingBlockStart="300">
+                                      <Button 
+                                          variant="primary" 
+                                          tone="success"
+                                          onClick={() => window.open(autoFix.url, '_blank')}
+                                      >
+                                          ⚡ {autoFix.label}
+                                      </Button>
+                                  </Box>
+                              )}
                             </Box>
                             {rec.resourceLinks && rec.resourceLinks.length > 0 && (
                               <Box paddingBlockStart="200">
