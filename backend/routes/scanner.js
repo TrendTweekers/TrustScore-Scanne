@@ -143,6 +143,7 @@ router.get('/dashboard', async (req, res) => {
   const session = res.locals.shopify?.session;
   const shop = session?.shop || req.query.shop;
 
+  console.log("DASHBOARD SHOP:", shop);
   console.log("HIT /api/dashboard | shop:", shop);
   
   // Cache busting headers
