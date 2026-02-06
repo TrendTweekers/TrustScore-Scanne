@@ -22,14 +22,19 @@ export function useAuthenticatedFetch() {
         const url = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
         const currentSearch = new URLSearchParams(window.location.search);
         const shop = currentSearch.get('shop');
-        const authUrl = url || `/api/auth?shop=${shop}`;
         
-        console.log('Auth required - requesting redirect via RedirectHandler:', authUrl);
+        console.log('Auth required - redirecting to Admin Path');
         
-        window.postMessage({ 
-            type: 'shopify:app:oauth:authorize', 
-            url: authUrl 
-        }, '*');
+        if (app) {
+          const redirect = Redirect.create(app);
+          // Redirect to the app's main page in admin, which will trigger the OAuth flow
+          // if the session is invalid
+          redirect.dispatch(Redirect.Action.ADMIN_PATH, '/apps/trustscore-scanner');
+        } else {
+            // Fallback for when app bridge isn't available (shouldn't happen in embedded)
+            const appSlug = import.meta.env.VITE_SHOPIFY_APP_SLUG || 'trustscore-scanner';
+            window.top.location.href = `https://${shop}/admin/apps/${appSlug}`;
+        }
 
         // Return a pending promise to prevent further processing/errors
         return new Promise(() => {});
