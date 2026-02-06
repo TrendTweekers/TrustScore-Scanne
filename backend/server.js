@@ -238,7 +238,7 @@ app.get(
       }
 
       console.log("Token exchange successful");
-      const { access_token: accessToken, scope } = tokenData;
+      const { access_token: accessToken, scope: grantedScope } = tokenData;
 
       // 3. Create and Store Session
       const offlineSessionId = 
@@ -254,16 +254,11 @@ app.get(
       }); 
 
       session.accessToken = accessToken; 
-      
-      // Fix: Ensure scope is a string, as required by Shopify validation
-      session.scope = Array.isArray(shopify.config.scopes) 
-        ? shopify.config.scopes.join(",") 
-        : String(shopify.config.scopes || ""); 
-
-      // Fix: Ensure state is set
+      session.scope = grantedScope || "read_products,read_themes";
       session.state = req.query.state || "";
 
       console.log(`Storing session for ${shop} (ID: ${offlineSessionId})`);
+      await shopify.config.sessionStorage.deleteSession(offlineSessionId);
       await shopify.config.sessionStorage.storeSession(session);
 
       // 4. Update Database (Preserve existing logic)
@@ -274,7 +269,7 @@ app.get(
           db.run(
             `INSERT INTO shops (shop, accessToken, scope, plan, created_at, isActive) 
              VALUES (?, ?, ?, 'FREE', datetime('now'), 1)`,
-            [shop, accessToken, scope],
+            [shop, accessToken, grantedScope],
             (err) => err ? reject(err) : resolve()
           );
         });
@@ -282,7 +277,7 @@ app.get(
          await new Promise((resolve, reject) => {
           db.run(
             `UPDATE shops SET accessToken = ?, scope = ?, isActive = 1 WHERE shop = ?`,
-            [accessToken, scope, shop],
+            [accessToken, grantedScope, shop],
             (err) => err ? reject(err) : resolve()
           );
          });
