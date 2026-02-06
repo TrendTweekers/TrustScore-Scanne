@@ -18,6 +18,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
   console.log("PLAN:", plan);
   
   const [selectedTab, setSelectedTab] = useState(0);
+  const [showQuickWins, setShowQuickWins] = useState(false);
 
   const handleTabChange = useCallback(
     (selectedTabIndex) => setSelectedTab(selectedTabIndex),
@@ -61,6 +62,28 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
         return "Trust signal impacting conversion rates";
       };
 
+      const getFixMetadata = (issueText) => {
+        const text = issueText.toLowerCase();
+        if (text.includes('ssl') || text.includes('https')) return { time: '5 mins', difficulty: 'Easy', impact: 'High' };
+        if (text.includes('favicon')) return { time: '2 mins', difficulty: 'Easy', impact: 'Medium' };
+        if (text.includes('contact')) return { time: '10 mins', difficulty: 'Easy', impact: 'High' };
+        if (text.includes('policy') || text.includes('refund') || text.includes('return')) return { time: '15 mins', difficulty: 'Medium', impact: 'High' };
+        if (text.includes('about')) return { time: '20 mins', difficulty: 'Medium', impact: 'Medium' };
+        if (text.includes('social')) return { time: '5 mins', difficulty: 'Easy', impact: 'Low' };
+        if (text.includes('broken link') || text.includes('404')) return { time: '10 mins', difficulty: 'Medium', impact: 'Medium' };
+        if (text.includes('image') || text.includes('quality')) return { time: '30 mins', difficulty: 'Hard', impact: 'High' };
+        if (text.includes('speed') || text.includes('performance')) return { time: '45 mins', difficulty: 'Hard', impact: 'High' };
+        if (text.includes('review')) return { time: '15 mins', difficulty: 'Medium', impact: 'High' };
+        return { time: '15 mins', difficulty: 'Medium', impact: 'Medium' };
+      };
+
+      const filteredRecommendations = showQuickWins 
+        ? recommendations.filter(rec => {
+            const meta = getFixMetadata(rec.issue);
+            return meta.difficulty === 'Easy' || meta.impact === 'High';
+        }).slice(0, 3)
+        : recommendations;
+
       return (
         <BlockStack gap="500">
           {type === 'product' && rawData && (
@@ -97,6 +120,19 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                   <Text variant="headingMd">85+/100</Text>
                 </BlockStack>
               </InlineGrid>
+
+              {/* Revenue Risk Indicator */}
+              {score < 50 && (
+                  <Box background="bg-surface-warning" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-warning">
+                      <BlockStack gap="200">
+                           <Text fontWeight="bold" tone="caution">⭐ Revenue Risk Indicator</Text>
+                           <Text variant="bodySm">
+                               ⚠️ Stores scoring below 40 often struggle with conversion trust.
+                               Fixing the top 3 issues typically produces the fastest gains.
+                           </Text>
+                      </BlockStack>
+                  </Box>
+              )}
 
               {/* Score Anxiety Reduction */}
               <Box background="bg-surface-info" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-emphasis-info">
@@ -228,22 +264,37 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
           {/* Recommendations Section */}
           <Card>
             <BlockStack gap="400">
-              <Text variant="headingMd" as="h3">Recommendations</Text>
+              <InlineGrid columns="auto auto" gap="400" alignItems="center">
+                  <Text variant="headingMd" as="h3">Recommendations</Text>
+                  <Button 
+                    size="slim" 
+                    variant={showQuickWins ? "primary" : "secondary"}
+                    onClick={() => setShowQuickWins(!showQuickWins)}
+                  >
+                    {showQuickWins ? "Show All" : "👉 Show me the fastest way to gain +10 points"}
+                  </Button>
+              </InlineGrid>
+
               {recommendations.length === 0 ? (
                 <Banner tone="success">Great job! No critical issues found.</Banner>
               ) : (
                 <BlockStack gap="300">
-                  {recommendations.map((rec, index) => (
+                  {filteredRecommendations.map((rec, index) => {
+                    const meta = getFixMetadata(rec.issue);
+                    return (
                     <Banner key={index} tone={getPriorityColor(rec.priority)}>
                       <BlockStack gap="200">
                         <Text fontWeight="bold" as="h3">
                           [{rec.priority ? rec.priority.toUpperCase() : 'MEDIUM'}] {rec.issue}
                         </Text>
+                        
+                        {/* Fix Difficulty Tags */}
                         <InlineGrid columns={3} gap="400">
-                           <Text tone="subdued">Impact: <Text as="span" fontWeight="bold">{rec.impact}</Text></Text>
-                           <Text tone="subdued">Effort: <Text as="span" fontWeight="bold">{rec.effort}</Text></Text>
-                           <Text tone="subdued">Cost: <Text as="span" fontWeight="bold">{rec.estimatedCost}</Text></Text>
+                           <Text tone="subdued">Impact: <Text as="span" fontWeight="bold" tone={meta.impact === 'High' ? 'critical' : 'base'}>{meta.impact}</Text></Text>
+                           <Text tone="subdued">Time: <Text as="span" fontWeight="bold">{meta.time}</Text></Text>
+                           <Text tone="subdued">Difficulty: <Text as="span" fontWeight="bold" tone={meta.difficulty === 'Easy' ? 'success' : 'base'}>{meta.difficulty}</Text></Text>
                         </InlineGrid>
+
                         <Box paddingBlockStart="200">
                           <Text fontWeight="bold">How to fix:</Text>
                           <Text as="p" style={{ whiteSpace: 'pre-line' }}>{rec.howToFix}</Text>
@@ -264,7 +315,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                         )}
                       </BlockStack>
                     </Banner>
-                  ))}
+                  )})}
                 </BlockStack>
               )}
             </BlockStack>
