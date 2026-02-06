@@ -2,10 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
 
-function TrustScore({ result, onUpgrade }) {
+function TrustScore({ result, plan, onUpgrade }) {
   // result can be the old structure OR the new structure { homepage, productPage }
   // We normalize it here
   const isNewStructure = result.homepage && result.productPage;
+  
+  const isPro = plan === "PRO" || plan === "PLUS";
+  console.log("PLAN:", plan);
   
   const [selectedTab, setSelectedTab] = useState(0);
 
@@ -91,7 +94,7 @@ function TrustScore({ result, onUpgrade }) {
           </Card>
 
           {/* AI Analysis Section (Pro/Plus Only) */}
-          {data.aiAnalysis ? (
+          {(data.aiAnalysis || isPro) ? (
              <Card>
                 <BlockStack gap="400">
                    <InlineGrid columns="auto auto" gap="200" alignItems="center">
@@ -103,33 +106,33 @@ function TrustScore({ result, onUpgrade }) {
                       <InlineGrid columns={2} gap="400">
                           <BlockStack gap="200">
                              <Text fontWeight="bold">Design Professionalism</Text>
-                             <Text variant="headingXl" tone="magic">{data.aiAnalysis.designScore}/10</Text>
+                             <Text variant="headingXl" tone="magic">{data.aiAnalysis?.designScore || '-'}/10</Text>
                           </BlockStack>
                           <BlockStack gap="200">
                              <Text fontWeight="bold">Niche Comparison</Text>
-                             <Text tone="subdued">{data.aiAnalysis.nicheComparison}</Text>
+                             <Text tone="subdued">{data.aiAnalysis?.nicheComparison || 'Pending analysis...'}</Text>
                           </BlockStack>
                       </InlineGrid>
                    </Box>
 
                    <BlockStack gap="200">
                       <Text fontWeight="bold">Assessment</Text>
-                      <Text as="p">{data.aiAnalysis.assessment}</Text>
+                      <Text as="p">{data.aiAnalysis?.assessment || 'Analysis will appear here after your next scan.'}</Text>
                    </BlockStack>
 
                    <BlockStack gap="200">
                       <Text fontWeight="bold">Top 3 Priority Fixes</Text>
                       <List type="number">
-                          {data.aiAnalysis.priorityFixes && data.aiAnalysis.priorityFixes.map((fix, i) => (
+                          {data.aiAnalysis?.priorityFixes ? data.aiAnalysis.priorityFixes.map((fix, i) => (
                               <List.Item key={i}>{fix}</List.Item>
-                          ))}
+                          )) : <List.Item>No fixes identified yet.</List.Item>}
                       </List>
                    </BlockStack>
                 </BlockStack>
              </Card>
           ) : (
              // Upsell for Free Plan users (only show on homepage tab to avoid clutter)
-             type === 'homepage' && (
+             !isPro && type === 'homepage' && (
                  <div 
                     onClick={onUpgrade}
                     style={{ cursor: 'pointer' }}

@@ -275,6 +275,7 @@ function Dashboard() {
                     <Layout.Section>
                         <TrustScore 
                             result={scanResult} 
+                            plan={plan}
                             onUpgrade={() => setShowUpgradeModal(true)}
                         />
                     </Layout.Section>
