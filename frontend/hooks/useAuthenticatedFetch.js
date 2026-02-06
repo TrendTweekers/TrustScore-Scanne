@@ -14,18 +14,25 @@ export function useAuthenticatedFetch() {
     };
     const response = await fetch(uri, { ...options, headers });
     
-    // Robust reauth handling for 403 and 302
-    if (response.status === 403 || response.status === 302) {
+    // Robust reauth handling for 401, 403 and 302
+    if (response.status === 401 || response.status === 403 || response.status === 302) {
       const reauth = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize");
-      if (reauth === "1") {
+      
+      if (response.status === 401 || reauth === "1") {
         const url = response.headers.get("X-Shopify-API-Request-Failure-Reauthorize-Url");
-        console.log('Reauth required - redirecting to:', url);
-        if (url && app) {
-          const redirectAction = Redirect.create(app);
-          redirectAction.dispatch(Redirect.Action.REMOTE, url);
-          // Return a pending promise to prevent further processing/errors
-          return new Promise(() => {});
-        }
+        const currentSearch = new URLSearchParams(window.location.search);
+        const shop = currentSearch.get('shop');
+        const authUrl = url || `/api/auth?shop=${shop}`;
+        
+        console.log('Auth required - requesting redirect via RedirectHandler:', authUrl);
+        
+        window.postMessage({ 
+            type: 'shopify:app:oauth:authorize', 
+            url: authUrl 
+        }, '*');
+
+        // Return a pending promise to prevent further processing/errors
+        return new Promise(() => {});
       } else if (response.status === 302) {
         const location = response.headers.get('Location');
         if (location) {
