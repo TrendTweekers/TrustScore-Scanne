@@ -192,6 +192,15 @@ const resetAIUsage = (shop) => {
     });
 };
 
+const adminUpgradeShop = (shop) => {
+  return new Promise((resolve, reject) => {
+    db.run("UPDATE shops SET plan = 'PRO', ai_usage_count = 0 WHERE shop = ?", [shop], function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+};
+
 module.exports = {
   createOrUpdateShop,
   getShop,
@@ -205,5 +214,6 @@ module.exports = {
   updateShopPlan,
   updateShopRevenue,
   incrementAIUsage,
-  resetAIUsage
+  resetAIUsage,
+  adminUpgradeShop
 };

@@ -4,7 +4,7 @@ const { shopifyApp } = require('@shopify/shopify-app-express');
 const { RedisSessionStorage } = require('@shopify/shopify-app-session-storage-redis');
 const { SQLiteSessionStorage } = require('@shopify/shopify-app-session-storage-sqlite');
 const { LATEST_API_VERSION, BillingInterval, DeliveryMethod } = require('@shopify/shopify-api');
-const { createOrUpdateShop, updateShopPlan } = require('./db.js');
+const { createOrUpdateShop, updateShopPlan, adminUpgradeShop } = require('./db.js');
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
 const path = require('path');
@@ -387,6 +387,16 @@ const handleBillingRequest = async (req, res) => {
 
 app.get('/api/billing/upgrade', handleBillingRequest);
 app.get('/api/billing/subscribe', handleBillingRequest);
+
+app.get('/admin/upgrade/:shop', async (req, res) => {
+  const { shop } = req.params;
+  try {
+    await adminUpgradeShop(shop);
+    res.json({ success: true, shop, plan: 'PRO' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Serve frontend
 app.use(serveStatic(FRONTEND_PATH, { index: false }));
