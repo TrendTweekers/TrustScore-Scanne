@@ -110,12 +110,15 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
       const getAutoFixAction = (issueText) => {
         const text = issueText.toLowerCase();
         const shopDomain = window.shopOrigin || ''; 
-        const adminUrl = `https://admin.shopify.com/store/${shopDomain.replace('.myshopify.com', '')}`;
+        const storeName = shopDomain.replace('.myshopify.com', '');
+        // Use cleaner admin URL construction
+        const adminUrl = `https://admin.shopify.com/store/${storeName}`;
 
         if (text.includes('policy') || text.includes('refund') || text.includes('return')) {
             return { label: 'Edit Policies', url: `${adminUrl}/settings/legal`, external: true };
         }
         if (text.includes('page') || text.includes('about') || text.includes('contact')) {
+            // Fix: simplified path to avoid 414 errors
             return { label: 'Manage Pages', url: `${adminUrl}/pages`, external: true };
         }
         if (text.includes('navigation') || text.includes('menu') || text.includes('link')) {

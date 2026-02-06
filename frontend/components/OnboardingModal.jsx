@@ -30,7 +30,8 @@ export function OnboardingModal({ open, onClose, onStartScan, mode = 'full' }) {
             
             if (mode === 'revenue_only') {
                 onClose();
-                if (onStartScan) onStartScan();
+                // Removed auto-scan: User must click "Run Trust Audit" manually
+                // if (onStartScan) onStartScan();
                 return; 
             }
         } catch (e) {

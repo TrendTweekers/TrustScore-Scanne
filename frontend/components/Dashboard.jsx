@@ -281,10 +281,17 @@ function Dashboard() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .trustscore-header {
+            background-color: #009688 !important;
+        }
+        .trustscore-header * {
+            color: white !important;
+            fill: white !important;
+        }
       `}</style>
 
       {/* Top Banner / Header */}
-      <Box padding="400" background="bg-surface" borderBlockEndWidth="025" borderColor="border-subdued">
+      <Box padding="400" className="trustscore-header" borderBlockEndWidth="025" borderColor="border-subdued">
          <InlineGrid columns="1fr auto" alignItems="center">
            <InlineGrid columns="auto auto" gap="300" alignItems="center">
               <BrandLogo size={32} withWordmark />
@@ -319,21 +326,6 @@ function Dashboard() {
         onUpgrade={handleUpgrade}
       />
       {toastMsg && <Toast content={toastMsg} onDismiss={toggleToast} duration={4000} />}
-
-      {selectedTab === 0 && !revenueBracket && (
-        <Box paddingInlineStart="400" paddingInlineEnd="400" paddingBlockEnd="400">
-            <CalloutCard
-                title="Set your monthly revenue to personalize your TrustScore"
-                illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
-                primaryAction={{
-                    content: 'Set Revenue',
-                    onAction: handleOpenRevenueModal
-                }}
-            >
-                <p>We use your revenue to estimate how much you're losing due to trust issues.</p>
-            </CalloutCard>
-        </Box>
-      )}
 
       <Layout>
         {selectedTab === 0 ? (
@@ -410,12 +402,17 @@ function Dashboard() {
 
                                 {/* RIGHT: Primary Actions */}
                                 <BlockStack gap="300" align="end">
-                                    <Button size="large" icon={ArrowRightIcon} onClick={() => {
-                                        const el = document.getElementById('recommendations-section');
-                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                    }}>
-                                        View Fixes
-                                    </Button>
+                                    <InlineGrid columns="auto auto" gap="300">
+                                        <Button size="large" icon={ShieldCheckMarkIcon} onClick={() => window.open('https://apps.shopify.com/search?q=trust+badges', '_blank')}>
+                                            Trust Badge Builder
+                                        </Button>
+                                        <Button size="large" variant="primary" icon={ArrowRightIcon} onClick={() => {
+                                            const el = document.getElementById('recommendations-section');
+                                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                        }}>
+                                            View Fixes
+                                        </Button>
+                                    </InlineGrid>
                                 </BlockStack>
                             </InlineGrid>
                         </Box>
@@ -531,7 +528,11 @@ function Dashboard() {
                                 <BlockStack gap="300">
                                      <InlineGrid columns="1fr auto" alignItems="center">
                                          <BlockStack gap="100">
-                                             <Text fontWeight="bold">Weekly Trust Report</Text>
+                                             <Tooltip content="Weekly emails with score changes & fixes">
+                                                 <Text fontWeight="bold" as="span" style={{textDecoration: 'underline', textDecorationStyle: 'dotted', cursor: 'help'}}>
+                                                     Weekly Trust Report
+                                                 </Text>
+                                             </Tooltip>
                                              <Text tone="subdued" variant="bodySm">Email summary of score changes</Text>
                                          </BlockStack>
                                          {isFree ? (

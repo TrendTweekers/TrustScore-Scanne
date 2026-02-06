@@ -364,15 +364,15 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                                         
                                         {/* Comparison Bars */}
                                         <BlockStack gap="200">
-                                            <InlineGrid columns="80px 1fr 40px" alignItems="center" gap="200">
+                                            <InlineGrid columns="80px 1fr 60px" alignItems="center" gap="200">
                                                 <Text variant="bodySm" tone="subdued">You</Text>
                                                 <ProgressBar progress={(myPoints / item.maxPoints) * 100} tone={myPoints === item.maxPoints ? 'success' : 'critical'} size="small" />
-                                                <Text variant="bodySm">{myPoints}</Text>
+                                                <Text variant="bodySm" fontWeight="bold">{myPoints}/{item.maxPoints}</Text>
                                             </InlineGrid>
-                                            <InlineGrid columns="80px 1fr 40px" alignItems="center" gap="200">
+                                            <InlineGrid columns="80px 1fr 60px" alignItems="center" gap="200">
                                                 <Text variant="bodySm" tone="subdued">Them</Text>
                                                 <ProgressBar progress={(compPoints / item.maxPoints) * 100} tone={compPoints === item.maxPoints ? 'success' : 'critical'} size="small" />
-                                                <Text variant="bodySm">{compPoints}</Text>
+                                                <Text variant="bodySm" fontWeight="bold">{compPoints}/{item.maxPoints}</Text>
                                             </InlineGrid>
                                         </BlockStack>
                                     </BlockStack>
@@ -394,22 +394,28 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                              <Box background="bg-surface-magic" padding="200" borderRadius="100">
                                 <Icon source={SearchIcon} tone="magic" />
                              </Box>
-                             <Text variant="headingLg">AI Competitor Intelligence</Text>
+                             <BlockStack gap="100">
+                                <Text variant="headingLg">AI Competitor Intelligence</Text>
+                                <Text tone="subdued">Powered by Claude 3.5 Sonnet</Text>
+                             </BlockStack>
                         </InlineGrid>
                         
                         <Box background="bg-surface-secondary" padding="400" borderRadius="200">
                             <BlockStack gap="400">
+                                <Text variant="headingSm">Why They Score Higher:</Text>
                                 <Text variant="bodyLg" as="p">
                                     {selectedScan.aiAnalysis.assessment || "No detailed assessment available."}
                                 </Text>
                                 
-                                {selectedScan.aiAnalysis.priorityFixes && (
+                                {(selectedScan.aiAnalysis.keyDifferences || selectedScan.aiAnalysis.priorityFixes) && (
                                     <>
                                     <Divider />
-                                    <Text variant="headingSm">Winning Strategies Detected:</Text>
+                                    <Text variant="headingSm">Winning Strategies (Copy These):</Text>
                                     <List type="bullet">
-                                        {selectedScan.aiAnalysis.priorityFixes.map((fix, i) => (
-                                            <List.Item key={i}>{fix}</List.Item>
+                                        {(selectedScan.aiAnalysis.keyDifferences || selectedScan.aiAnalysis.priorityFixes).map((fix, i) => (
+                                            <List.Item key={i}>
+                                                <Text as="span" fontWeight="bold">{fix}</Text>
+                                            </List.Item>
                                         ))}
                                     </List>
                                     </>
