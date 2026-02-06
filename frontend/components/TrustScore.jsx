@@ -8,6 +8,13 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
   const [progress, setProgress] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const prevScoreRef = React.useRef(null);
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
+
+  const handleTabChange = useCallback(
+    (selectedTabIndex) => setSelectedTab(selectedTabIndex),
+    [],
+  );
 
   useEffect(() => {
     if (result?.score) {
@@ -113,14 +120,6 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
   
   console.log("PLAN:", plan);
   
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
-
-  const handleTabChange = useCallback(
-    (selectedTabIndex) => setSelectedTab(selectedTabIndex),
-    [],
-  );
-
   const tabs = [
     {
       id: 'homepage-analysis',
