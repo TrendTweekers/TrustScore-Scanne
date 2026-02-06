@@ -312,7 +312,11 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
             
             await incrementAIUsage(shop);
 
-            console.log("[AI] success | shop:", shop);
+            if (aiAnalysis?.error) {
+              console.log("[AI] failed (returned error object) | shop:", shop);
+            } else {
+              console.log("[AI] success | shop:", shop);
+            }
         } catch (e) {
             console.error("[AI] FAILED | shop:", shop);
             console.error(e?.stack || e);

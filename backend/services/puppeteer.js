@@ -24,11 +24,17 @@ async function takeScreenshots(url) {
     screenshots: {
         desktop: null,
         mobile: null
-    }
+    },
+    html: "",
+    text: ""
   };
 
   try {
     await page.goto(url, { waitUntil: 'networkidle2' });
+    
+    // Extract raw content for AI
+    result.html = await page.content();
+    result.text = await page.evaluate(() => document.body.innerText);
     
     // Check for trust badges (simplified heuristic: images with keywords)
     const images = await page.evaluate(() => {
