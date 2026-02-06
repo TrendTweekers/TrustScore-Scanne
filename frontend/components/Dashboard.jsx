@@ -157,7 +157,7 @@ function Dashboard() {
 
   const tabs = [
       { id: 'dashboard', content: 'Dashboard' },
-      { id: 'competitors', content: 'Competitor Analysis' },
+      { id: 'competitors', content: 'Competitive Trust Intelligence' },
       { id: 'help', content: 'Help & FAQ' },
   ];
 
@@ -191,6 +191,25 @@ function Dashboard() {
 
         {selectedTab === 0 ? (
             <>
+                {/* Hero Insight Card */}
+                {!loading && scanResult && (
+                    <Layout.Section>
+                        <CalloutCard
+                            title="Revenue Opportunity Detected"
+                            illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
+                            primaryAction={{
+                                content: 'Fix Top Issues',
+                                onAction: () => {
+                                    const el = document.getElementById('recommendations-section');
+                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                },
+                            }}
+                        >
+                            <p>Your store may be losing significant conversions due to missing trust signals. Fixing the top issues typically delivers the fastest revenue lift.</p>
+                        </CalloutCard>
+                    </Layout.Section>
+                )}
+
                 {/* Success Banner */}
                 {showSuccessBanner && (
                     <Layout.Section>

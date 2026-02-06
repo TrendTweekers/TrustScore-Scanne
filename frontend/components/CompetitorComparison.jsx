@@ -64,7 +64,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
       return (
           <Card>
               <BlockStack gap="400">
-                  <Text variant="headingMd">Competitor Analysis</Text>
+                  <Text variant="headingMd">Competitive Trust Intelligence</Text>
                   <Banner tone="info" title="Pro Feature">
                       Upgrade to Pro to audit competitor stores and see how you stack up.
                   </Banner>
@@ -77,7 +77,7 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
     <BlockStack gap="500">
         <Card>
             <BlockStack gap="400">
-                <Text variant="headingMd">Competitor Analysis</Text>
+                <Text variant="headingMd">Competitive Trust Intelligence</Text>
                 <Text as="p">
                     Compare your trust score against any competitor. 
                     <Text as="span" tone="subdued"> ({scans.length}/{limit} audits used)</Text>
