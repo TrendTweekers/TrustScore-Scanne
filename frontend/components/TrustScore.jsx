@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
 
@@ -74,7 +74,7 @@ function TrustScore({ result, plan, onUpgrade }) {
           <Card>
             <BlockStack gap="400">
               <Text variant="headingLg" as="h2">{type === 'homepage' ? 'Homepage' : 'Product Page'} Trust Score: {score}/100</Text>
-              <ProgressBar progress={score} size="large" tone={score > 80 ? 'success' : score > 50 ? 'warning' : 'critical'} />
+              <ProgressBar progress={score} size="large" tone={score > 80 ? 'success' : 'warning'} />
               
               <InlineGrid columns={3} gap="400">
                 <BlockStack gap="100">
@@ -90,11 +90,62 @@ function TrustScore({ result, plan, onUpgrade }) {
                   <Text variant="headingMd">85+/100</Text>
                 </BlockStack>
               </InlineGrid>
+
+              {/* Score Anxiety Reduction */}
+              <Box background="bg-surface-info" padding="300" borderRadius="200" borderInlineStartWidth="4px" borderColor="border-emphasis-info">
+                  <Text variant="bodySm" tone="subdued">
+                      Most new or unoptimized Shopify stores score between 15–35 on their first scan. 
+                      Scores typically improve quickly after fixing the highest-impact trust issues.
+                  </Text>
+              </Box>
             </BlockStack>
           </Card>
 
           {/* AI Analysis Section (Pro/Plus Only) */}
-          {(data.aiAnalysis || isPro) ? (
+          {isFree ? (
+             // Upsell for Free Plan users (Strict Gating)
+             type === 'homepage' && (
+                 <div 
+                    onClick={() => {
+                        trackEvent('UPGRADE_CLICKED', { source: 'ai_gating_card' });
+                        onUpgrade();
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { 
+                        if (e.key === 'Enter') {
+                            trackEvent('UPGRADE_CLICKED', { source: 'ai_gating_card' });
+                            onUpgrade(); 
+                        }
+                    }}
+                 >
+                    <Card>
+                       <BlockStack gap="400">
+                          <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                              <Icon source={InfoIcon} tone="subdued" />
+                              <Text variant="headingMd" as="h3" tone="subdued">AI Qualitative Analysis</Text>
+                          </InlineGrid>
+                          <Banner tone="info">
+                              <BlockStack gap="300">
+                                  <Text as="p" fontWeight="bold">Unlock AI Insights</Text>
+                                  <Text as="p">Upgrade to <strong>Pro</strong> to get qualitative design analysis, copy review, and personalized fixes from Claude AI.</Text>
+                                  <Box>
+                                      <Button variant="primary" onClick={(e) => {
+                                          e.stopPropagation();
+                                          trackEvent('UPGRADE_CLICKED', { source: 'ai_gating_button' });
+                                          onUpgrade();
+                                      }}>
+                                          Upgrade to Pro ($19/mo)
+                                      </Button>
+                                  </Box>
+                              </BlockStack>
+                          </Banner>
+                       </BlockStack>
+                    </Card>
+                 </div>
+             )
+          ) : (
              <Card>
                 <BlockStack gap="400">
                    <InlineGrid columns="auto auto" gap="200" alignItems="center">
@@ -102,6 +153,11 @@ function TrustScore({ result, plan, onUpgrade }) {
                        <Text variant="headingMd" as="h3">AI Qualitative Analysis (Claude)</Text>
                    </InlineGrid>
                    
+                   {/* Usage Counter */}
+                   <Text variant="bodySm" tone={aiUsageCount >= 10 ? 'critical' : 'subdued'}>
+                       {aiUsageCount}/10 AI analyses used this month
+                   </Text>
+
                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
                       <InlineGrid columns={2} gap="400">
                           <BlockStack gap="200">
@@ -130,41 +186,8 @@ function TrustScore({ result, plan, onUpgrade }) {
                    </BlockStack>
                 </BlockStack>
              </Card>
-          ) : (
-             // Upsell for Free Plan users (only show on homepage tab to avoid clutter)
-             !isPro && type === 'homepage' && (
-                 <div 
-                    onClick={onUpgrade}
-                    style={{ cursor: 'pointer' }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter') onUpgrade(); }}
-                 >
-                    <Card>
-                       <BlockStack gap="400">
-                          <InlineGrid columns="auto auto" gap="200" alignItems="center">
-                              <Icon source={InfoIcon} tone="subdued" />
-                              <Text variant="headingMd" as="h3" tone="subdued">AI Qualitative Analysis</Text>
-                          </InlineGrid>
-                          <Banner tone="info">
-                              <BlockStack gap="300">
-                                  <Text as="p" fontWeight="bold">Unlock AI Insights</Text>
-                                  <Text as="p">Upgrade to <strong>Pro</strong> to get qualitative design analysis, copy review, and personalized fixes from Claude AI.</Text>
-                                  <Box>
-                                      <Button variant="primary" onClick={(e) => {
-                                          e.stopPropagation();
-                                          onUpgrade();
-                                      }}>
-                                          Upgrade to Pro ($19/mo)
-                                      </Button>
-                                  </Box>
-                              </BlockStack>
-                          </Banner>
-                       </BlockStack>
-                    </Card>
-                 </div>
-             )
           )}
+          {/* END AI Analysis Section */}
 
           {/* Score Breakdown Section */}
           {breakdown && breakdown.length > 0 && (
@@ -272,6 +295,14 @@ function TrustScore({ result, plan, onUpgrade }) {
               </BlockStack>
             </Card>
           )}
+
+          {/* Founder Trust Signal */}
+          <Box paddingBlockStart="800" paddingBlockEnd="400">
+              <Text variant="bodySm" tone="subdued" alignment="center">
+                  Built by an independent founder. <br/>
+                  Questions? I personally reply within 24 hours.
+              </Text>
+          </Box>
         </BlockStack>
       );
   };

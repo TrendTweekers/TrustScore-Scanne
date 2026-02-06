@@ -122,6 +122,10 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                 <BlockStack gap="500">
                     <Text variant="headingLg" as="h3">Comparison Result</Text>
                     
+                    {!selectedScan.score ? (
+                        <Banner tone="warning">Invalid scan data. Please try again.</Banner>
+                    ) : (
+                    <>
                     <InlineGrid columns={2} gap="800">
                         {/* My Store */}
                         <BlockStack gap="400">
@@ -151,17 +155,27 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
 
                     <BlockStack gap="400">
                         <Text variant="headingMd">Competitor Insights</Text>
-                        {selectedScan.result && JSON.parse(selectedScan.result).aiAnalysis ? (
-                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                <BlockStack gap="200">
-                                    <Text fontWeight="bold">AI Assessment</Text>
-                                    <Text>{JSON.parse(selectedScan.result).aiAnalysis.assessment}</Text>
-                                </BlockStack>
-                            </Box>
-                        ) : (
-                            <Text tone="subdued">No detailed AI insights available for this scan.</Text>
-                        )}
+                        {(() => {
+                            try {
+                                const parsedResult = selectedScan.result ? JSON.parse(selectedScan.result) : null;
+                                if (parsedResult && parsedResult.aiAnalysis) {
+                                    return (
+                                        <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                            <BlockStack gap="200">
+                                                <Text fontWeight="bold">AI Assessment</Text>
+                                                <Text>{parsedResult.aiAnalysis.assessment}</Text>
+                                            </BlockStack>
+                                        </Box>
+                                    );
+                                }
+                            } catch (e) {
+                                console.error("Error parsing competitor result:", e);
+                            }
+                            return <Text tone="subdued">No detailed AI insights available for this scan.</Text>;
+                        })()}
                     </BlockStack>
+                    </>
+                    )}
                 </BlockStack>
             </Card>
         )}
