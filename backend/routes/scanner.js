@@ -151,6 +151,11 @@ router.get('/dashboard', async (req, res) => {
     const history = await getScanHistory(session.shop);
     const shopData = await getShop(session.shop);
 
+    console.log("=== DASHBOARD DATA ===");
+    console.log("Shop:", session.shop);
+    console.log("Plan from DB:", shopData?.plan);
+    console.log("Full shop data:", shopData);
+
     let currentScore = 0;
     let trend = 0;
     let previousScore = 0;
