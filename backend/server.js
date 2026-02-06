@@ -254,7 +254,14 @@ app.get(
       }); 
 
       session.accessToken = accessToken; 
-      session.scope = shopify.config.scopes; 
+      
+      // Fix: Ensure scope is a string, as required by Shopify validation
+      session.scope = Array.isArray(shopify.config.scopes) 
+        ? shopify.config.scopes.join(",") 
+        : String(shopify.config.scopes || ""); 
+
+      // Fix: Ensure state is set
+      session.state = req.query.state || "";
 
       console.log(`Storing session for ${shop} (ID: ${offlineSessionId})`);
       await shopify.config.sessionStorage.storeSession(session);
