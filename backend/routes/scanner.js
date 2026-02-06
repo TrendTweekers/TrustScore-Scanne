@@ -310,12 +310,12 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
 
             aiAnalysis = await analyzeStoreWithClaude(aiPayload);
             
-            await incrementAIUsage(shop);
-
-            if (aiAnalysis?.error) {
-              console.log("[AI] failed (returned error object) | shop:", shop);
+            if (!aiAnalysis || aiAnalysis.error) {
+                console.warn("[AI] Skipping usage increment due to failed analysis");
+                console.log("[AI] failed (returned error object) | shop:", shop);
             } else {
-              console.log("[AI] success | shop:", shop);
+                await incrementAIUsage(shop);
+                console.log("[AI] success | shop:", shop);
             }
         } catch (e) {
             console.error("[AI] FAILED | shop:", shop);

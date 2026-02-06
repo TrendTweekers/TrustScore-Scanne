@@ -1,5 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
+console.log("[AI CONFIG] Using model: claude-3-haiku-20240307");
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -42,7 +44,7 @@ const analyzeStoreWithClaude = async (payload) => {
     ];
 
     const msg = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-latest",
+      model: "claude-3-haiku-20240307",
       max_tokens: 1024,
       messages: messages,
     });
@@ -58,8 +60,8 @@ const analyzeStoreWithClaude = async (payload) => {
     
     return JSON.parse(textResponse);
 
-  } catch (error) {
-    console.error('Claude Analysis Failed:', error);
+  } catch (err) {
+    console.error("[CLAUDE ERROR]", err?.response?.data || err.message || err);
     return null; // Fail gracefully
   }
 };
