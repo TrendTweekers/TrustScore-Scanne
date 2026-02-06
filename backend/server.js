@@ -3,7 +3,7 @@ const express = require('express');
 const { shopifyApp } = require('@shopify/shopify-app-express');
 const { RedisSessionStorage } = require('@shopify/shopify-app-session-storage-redis');
 const { SQLiteSessionStorage } = require('@shopify/shopify-app-session-storage-sqlite');
-const { LATEST_API_VERSION, BillingInterval, DeliveryMethod } = require('@shopify/shopify-api');
+const { LATEST_API_VERSION, BillingInterval, DeliveryMethod, Session } = require('@shopify/shopify-api');
 const { createOrUpdateShop, updateShopPlan, adminUpgradeShop, getShop, db } = require('./db.js');
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
@@ -241,17 +241,22 @@ app.get(
       const { access_token: accessToken, scope } = tokenData;
 
       // 3. Create and Store Session
-      const sessionId = shopify.api.session.getOfflineId(shop);
-      const session = new shopify.api.Session({
-        id: sessionId,
-        shop,
-        state: state || '',
-        isOnline: false,
-      });
-      session.accessToken = accessToken;
-      session.scope = scope;
+      const offlineSessionId = 
+        (shopify.api.session && shopify.api.session.getOfflineId) 
+          ? shopify.api.session.getOfflineId(shop) 
+          : `offline_${shop}`; 
 
-      console.log(`Storing session for ${shop} (ID: ${sessionId})`);
+      const session = new Session({ 
+        id: offlineSessionId, 
+        shop, 
+        state: req.query.state || "state", 
+        isOnline: false, 
+      }); 
+
+      session.accessToken = accessToken; 
+      session.scope = shopify.config.scopes; 
+
+      console.log(`Storing session for ${shop} (ID: ${offlineSessionId})`);
       await shopify.config.sessionStorage.storeSession(session);
 
       // 4. Update Database (Preserve existing logic)
