@@ -36,7 +36,7 @@ const sendScoreDropAlert = async (email, shop, oldScore, newScore) => {
     try {
         const transporter = await createTransporter();
         const info = await transporter.sendMail({
-            from: '"TrustScore Scanner" <alerts@trustscore.app>',
+            from: '"TrustScore" <alerts@trustscore.app>',
             to: email || `merchant@${shop}`, // Use provided email or fallback
             subject: `🚨 Trust Score Alert: Score Dropped for ${shop}`,
             text: `Your Trust Score dropped from ${oldScore} to ${newScore}. Login to see details.`,
