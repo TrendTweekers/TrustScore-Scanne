@@ -180,6 +180,7 @@ router.get('/dashboard', async (req, res) => {
     console.log("Shop:", shop);
     console.log("Plan from DB:", shopData?.plan);
     console.log("Full shop data:", shopData);
+    console.log("[DASHBOARD] shop:", shop, "plan:", shopData?.plan, "scan_count:", shopData?.scan_count, "ai_usage_count:", shopData?.ai_usage_count);
 
     let currentScore = 0;
     let trend = 0;
@@ -254,7 +255,28 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
             console.log("[AI] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
             console.log("[AI] OPENROUTER_API_KEY present:", !!process.env.OPENROUTER_API_KEY);
 
-            aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
+            // Calculate score first to pass to AI (without AI analysis itself yet)
+            const tempScoreResult = calculateTrustScore({ ...puppeteerResult });
+            
+            const aiPayload = {
+              shop,
+              url: targetUrl,
+              score: tempScoreResult.homepage ? tempScoreResult.homepage.score : tempScoreResult.score,
+              grade: tempScoreResult.grade,
+              recommendations: (tempScoreResult.recommendations || []).slice(0, 8),
+              breakdown: (tempScoreResult.breakdown || []).slice(0, 12),
+              html: (puppeteerResult.html || "").slice(0, 12000),
+              text: (puppeteerResult.text || "").slice(0, 12000),
+            };
+
+            console.log("[AI] payload sizes:", {
+              html: aiPayload.html?.length || 0,
+              text: aiPayload.text?.length || 0,
+              recs: aiPayload.recommendations?.length || 0,
+              breakdown: aiPayload.breakdown?.length || 0,
+            });
+
+            aiAnalysis = await analyzeStoreWithClaude(aiPayload);
             
             await incrementAIUsage(shop);
 
@@ -266,7 +288,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
             aiAnalysis = {
                 error: e?.message || String(e),
                 // include a short stack so you can see it in the API response
-                stack: (e?.stack || "").split("\n").slice(0, 8).join("\n"),
+                stack: (e?.stack || "").split("\n").slice(0, 12).join("\n"),
             };
         }
     } else {
@@ -275,6 +297,10 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
 
     // 3. Generate score (include AI analysis if available)
     const scoreResult = calculateTrustScore({ ...puppeteerResult, aiAnalysis });
+    
+    // Log validation before response
+    console.log("[AI] aiAnalysis type:", typeof aiAnalysis, "keys:", aiAnalysis && Object.keys(aiAnalysis));
+    if (aiAnalysis?.error) console.log("[AI] aiAnalysis.error:", aiAnalysis.error);
 
     // 4. Save to DB
     // We save the homepage score as the main score for now, or maybe an average?

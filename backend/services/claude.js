@@ -4,7 +4,7 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const analyzeStoreWithClaude = async (screenshots, textData) => {
+const analyzeStoreWithClaude = async (payload) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn('ANTHROPIC_API_KEY is missing. Skipping AI analysis.');
     return null;
@@ -17,37 +17,29 @@ const analyzeStoreWithClaude = async (screenshots, textData) => {
         content: [
           {
             type: 'text',
-            text: `You are an expert e-commerce conversion rate optimization (CRO) specialist. Analyze the provided screenshots of an online store (Homepage and potentially Product Page).
+            text: `You are an expert e-commerce conversion rate optimization (CRO) specialist. Analyze the provided store data (HTML structure, text content, and trust score metrics).
             
-            Based on the visual design and content, provide a qualitative assessment in JSON format with the following fields:
-            - "designScore": A number between 1-10 rating the professionalism of the design.
-            - "assessment": A 2-3 paragraph qualitative assessment of the store's trustworthiness, copy quality, and layout.
+            Store Info:
+            - URL: ${payload.url}
+            - Score: ${payload.score} (Grade: ${payload.grade})
+            - Key Recommendations: ${JSON.stringify(payload.recommendations)}
+            - Score Breakdown: ${JSON.stringify(payload.breakdown)}
+            
+            Based on this data, provide a qualitative assessment in JSON format with the following fields:
+            - "designScore": A number between 1-10 rating the implied professionalism based on the data.
+            - "assessment": A 2-3 paragraph qualitative assessment of the store's trustworthiness, copy quality, and structure.
             - "priorityFixes": An array of strings containing the top 3 priority fixes in plain English.
             - "nicheComparison": A brief comparison to what is expected for similar stores in this niche.
             
-            Be critical but constructive. Look for red flags like typos, poor image quality, inconsistent fonts, or missing trust signals.
+            Be critical but constructive. Look for red flags like missing trust signals, poor copy, or structure issues.
+            
+            Raw Text Sample:
+            ${(payload.text || "").slice(0, 2000)}
             `
           }
         ]
       }
     ];
-
-    // Add screenshots to the message
-    if (screenshots.desktop) {
-        messages[0].content.push({
-            type: 'image',
-            source: {
-                type: 'base64',
-                media_type: 'image/png',
-                data: screenshots.desktop
-            }
-        });
-    }
-
-    // Only add mobile if distinct or if needed, but let's stick to desktop for main analysis to save tokens/complexity 
-    // or add both if available. Let's add mobile too if it fits.
-    // Note: Claude has image size limits. Puppeteer screenshots might be large.
-    // We assume the base64 strings are valid.
 
     const msg = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
