@@ -228,8 +228,10 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
 
     // 2. AI Qualitative Analysis (PRO/PLUS only)
     let aiAnalysis = null;
-    let aiLimitReached = false;
     const shopData = await getShop(session.shop) || {}; // Defensive: ensure object exists
+
+    console.log("[SCAN] shop:", session.shop);
+    console.log("[SCAN] plan from DB:", shopData.plan, "ai_usage_count:", shopData.ai_usage_count);
 
     // Check reset date
     if (shopData.ai_usage_reset_date && new Date(shopData.ai_usage_reset_date) < new Date()) {
@@ -237,27 +239,17 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
         shopData.ai_usage_count = 0; 
     }
 
-    console.log("=== SCAN BILLING CHECK ===");
-    console.log("User Plan:", userPlan);
-    console.log("Shop Data:", shopData);
-    console.log("Should run AI?", userPlan === 'PRO' || userPlan === 'PLUS');
-
-    if (userPlan === 'PRO' || userPlan === 'PLUS') {
+    // Force AI block to run ONLY when plan is PRO/PLUS (no other gating for now)
+    const plan = shopData.plan || 'FREE';
+    if (['PRO', 'PLUS'].includes(plan)) {
         console.log("=== ENTERING AI ANALYSIS BLOCK ===");
-        console.log("ANTHROPIC_API_KEY exists:", !!process.env.ANTHROPIC_API_KEY);
-        console.log("AI usage count:", shopData.ai_usage_count);
-
-        if (userPlan === 'PRO' && (shopData.ai_usage_count || 0) >= 10) {
-             aiLimitReached = true;
-             console.log(`AI limit reached for ${session.shop} (Pro: ${shopData.ai_usage_count || 0}/10)`);
-        } else {
-            try {
-                console.log('Running Claude AI Analysis...');
-                aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
-                await incrementAIUsage(session.shop);
-            } catch (aiError) {
-                console.error('AI Analysis failed:', aiError);
-            }
+        try {
+            console.log('Running Claude AI Analysis...');
+            aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
+            await incrementAIUsage(session.shop);
+        } catch (aiError) {
+            console.error('AI Analysis failed:', aiError);
+            aiAnalysis = { error: aiError.message || String(aiError) };
         }
     }
 
@@ -300,6 +292,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
     res.json({
       url: targetUrl,
       score: finalScore,
+      aiAnalysis,
       result: {
           ...scoreResult,
           aiAnalysis
