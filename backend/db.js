@@ -198,9 +198,24 @@ const resetAIUsage = (shop) => {
     });
 };
 
+const setShopPlan = (shop, plan) => {
+  return new Promise((resolve, reject) => {
+    const query = `INSERT INTO shops (shop, plan, created_at, isActive) 
+                   VALUES (?, ?, datetime('now'), 1) 
+                   ON CONFLICT(shop) DO UPDATE SET plan = ?`;
+    db.run(query, [shop, plan, plan], function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+};
+
 const adminUpgradeShop = (shop) => {
   return new Promise((resolve, reject) => {
-    db.run("UPDATE shops SET plan = 'PRO', ai_usage_count = 0 WHERE shop = ?", [shop], function(err) {
+    const query = `INSERT INTO shops (shop, plan, ai_usage_count, created_at, isActive) 
+                   VALUES (?, 'PRO', 0, datetime('now'), 1) 
+                   ON CONFLICT(shop) DO UPDATE SET plan = 'PRO', ai_usage_count = 0`;
+    db.run(query, [shop], function(err) {
       if (err) reject(err);
       else resolve(this);
     });
@@ -222,5 +237,6 @@ module.exports = {
   incrementAIUsage,
   resetAIUsage,
   adminUpgradeShop,
+  setShopPlan,
   db
 };

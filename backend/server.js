@@ -4,7 +4,7 @@ const { shopifyApp } = require('@shopify/shopify-app-express');
 const { RedisSessionStorage } = require('@shopify/shopify-app-session-storage-redis');
 const { SQLiteSessionStorage } = require('@shopify/shopify-app-session-storage-sqlite');
 const { LATEST_API_VERSION, BillingInterval, DeliveryMethod, Session } = require('@shopify/shopify-api');
-const { createOrUpdateShop, updateShopPlan, adminUpgradeShop, getShop, db } = require('./db.js');
+const { createOrUpdateShop, updateShopPlan, adminUpgradeShop, setShopPlan, getShop, db } = require('./db.js');
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
 const path = require('path');
@@ -466,6 +466,21 @@ const handleBillingRequest = async (req, res) => {
 
 app.get('/api/billing/upgrade', handleBillingRequest);
 app.get('/api/billing/subscribe', handleBillingRequest);
+
+app.get('/admin/plan/:shop/:plan', async (req, res) => {
+  const { shop, plan } = req.params;
+  const upperPlan = plan.toUpperCase();
+  if (!['FREE', 'PRO', 'PLUS'].includes(upperPlan)) {
+    return res.status(400).json({ error: 'Invalid plan. Must be FREE, PRO, or PLUS' });
+  }
+
+  try {
+    await setShopPlan(shop, upperPlan);
+    res.json({ success: true, shop, plan: upperPlan });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get('/admin/upgrade/:shop', async (req, res) => {
   const { shop } = req.params;
