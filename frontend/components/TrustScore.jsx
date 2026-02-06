@@ -2,12 +2,19 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
 
-function TrustScore({ result, plan, onUpgrade }) {
+function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
+  if (!plan) {
+    return null; // prevents React crash during hydration
+  }
+
   // result can be the old structure OR the new structure { homepage, productPage }
   // We normalize it here
   const isNewStructure = result.homepage && result.productPage;
   
-  const isPro = plan === "PRO" || plan === "PLUS";
+  const isFree = plan === 'FREE';
+  const isPro = plan === 'PRO';
+  const isPlus = plan === 'PLUS';
+  
   console.log("PLAN:", plan);
   
   const [selectedTab, setSelectedTab] = useState(0);
@@ -102,7 +109,7 @@ function TrustScore({ result, plan, onUpgrade }) {
           </Card>
 
           {/* AI Analysis Section (Pro/Plus Only) */}
-          {isFree ? (
+          {plan === 'FREE' ? (
              // Upsell for Free Plan users (Strict Gating)
              type === 'homepage' && (
                  <div 
