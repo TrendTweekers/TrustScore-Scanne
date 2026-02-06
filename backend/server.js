@@ -125,7 +125,8 @@ const shopify = shopifyApp({
       sameSite: 'none',
       httpOnly: true,
       maxAge: 86400000, // 1 day
-      path: '/'
+      path: '/',
+      domain: undefined // Let browser set automatically
     }
   }
 });
