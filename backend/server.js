@@ -42,6 +42,15 @@ sessionStorage.loadSession = async (id) => {
         const session = await originalLoadCallback.call(sessionStorage, id);
         if (session) {
             console.log(`[Session] FOUND: ID=${session.id} | Shop=${session.shop} | AccessToken=${session.accessToken ? "PRESENT" : "MISSING"} | Scope=${session.scope} | Online=${session.isOnline}`);
+            
+            // Self-heal: offline sessions with missing scope
+            if (!session.isOnline && session.accessToken && !session.scope) {
+                const fallbackScope = String(process.env.SCOPES || process.env.SHOPIFY_API_SCOPES || "read_products,read_themes");
+                session.scope = fallbackScope;
+                console.log(`[Session] PATCH: scope was missing. Set scope="${fallbackScope}" for ${id}`);
+                // Use original store callback to avoid recursive logging if we used the wrapper
+                await originalStoreCallback.call(sessionStorage, session);
+            }
         } else {
             console.log(`[Session] NOT FOUND for ID: ${id}`);
         }
