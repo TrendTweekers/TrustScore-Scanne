@@ -4,7 +4,7 @@ const { shopifyApp } = require('@shopify/shopify-app-express');
 const { RedisSessionStorage } = require('@shopify/shopify-app-session-storage-redis');
 const { SQLiteSessionStorage } = require('@shopify/shopify-app-session-storage-sqlite');
 const { LATEST_API_VERSION, BillingInterval, DeliveryMethod } = require('@shopify/shopify-api');
-const { createOrUpdateShop, updateShopPlan, adminUpgradeShop } = require('./db.js');
+const { createOrUpdateShop, updateShopPlan, adminUpgradeShop, getShop, db } = require('./db.js');
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
 const path = require('path');
@@ -230,17 +230,43 @@ app.get(
     // console.log("Session created and saved | shop:", session.shop, "id:", session.id, "accessToken:", !!session.accessToken);
     
     // Ensure shop record exists in database
-    const { getShop, createOrUpdateShop } = require('./db');
     const existing = await getShop(session.shop);
 
     if (!existing) {
       console.log("Creating new shop record:", session.shop);
-      // createOrUpdateShop already handles insertion/upsert
-      await createOrUpdateShop(session.shop, session.accessToken);
+      await new Promise((resolve, reject) => {
+        db.run(
+          `INSERT INTO shops (shop, accessToken, scope, plan, created_at, isActive) VALUES (?, ?, ?, 'FREE', datetime('now'), 1)`,
+          [session.shop, session.accessToken, session.scope],
+          (err) => {
+            if (err) {
+                console.error("Failed to create shop record:", err);
+                reject(err);
+            } else {
+                console.log("Shop record created successfully");
+                resolve();
+            }
+          }
+        );
+      });
     } else {
       console.log("Shop record already exists:", session.shop);
-      // Update access token just in case
-      await createOrUpdateShop(session.shop, session.accessToken);
+      // Update access token and scope
+      await new Promise((resolve, reject) => {
+          db.run(
+            `UPDATE shops SET accessToken = ?, scope = ?, isActive = 1 WHERE shop = ?`,
+            [session.accessToken, session.scope, session.shop],
+            (err) => {
+                if (err) {
+                    console.error("Failed to update shop record:", err);
+                    reject(err);
+                } else {
+                    console.log("Shop record updated successfully");
+                    resolve();
+                }
+            }
+          );
+      });
     }
 
     next();

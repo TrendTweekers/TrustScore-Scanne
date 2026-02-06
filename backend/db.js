@@ -45,7 +45,9 @@ db.serialize(() => {
       const migrations = [
         { name: 'revenue_bracket', query: "ALTER TABLE shops ADD COLUMN revenue_bracket TEXT" },
         { name: 'ai_usage_count', query: "ALTER TABLE shops ADD COLUMN ai_usage_count INTEGER DEFAULT 0" },
-        { name: 'ai_usage_reset_date', query: "ALTER TABLE shops ADD COLUMN ai_usage_reset_date DATETIME" }
+        { name: 'ai_usage_reset_date', query: "ALTER TABLE shops ADD COLUMN ai_usage_reset_date DATETIME" },
+        { name: 'scope', query: "ALTER TABLE shops ADD COLUMN scope TEXT" },
+        { name: 'created_at', query: "ALTER TABLE shops ADD COLUMN created_at DATETIME" }
       ];
 
       migrations.forEach(migration => {
@@ -215,5 +217,6 @@ module.exports = {
   updateShopRevenue,
   incrementAIUsage,
   resetAIUsage,
-  adminUpgradeShop
+  adminUpgradeShop,
+  db
 };
