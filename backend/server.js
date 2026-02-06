@@ -300,6 +300,13 @@ app.get('/api/session-status', (req, res) => {
   });
 });
 
+// ExitIframe route to handle re-auth escaping
+app.get('/exitiframe', (req, res) => {
+  const shop = req.query.shop;
+  console.log('ExitIframe hit for shop:', shop);
+  res.redirect(`/api/auth?shop=${shop}`);
+});
+
 // MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
 app.use((req, res, next) => {
   // DO NOT force header for auth routes!

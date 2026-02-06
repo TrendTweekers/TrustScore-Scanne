@@ -15,9 +15,13 @@ export function useAuthenticatedFetch() {
     
     // Robust reauth handling
     if (response.status === 401 || response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1") {
-      console.log("Auth failed - forcing full reload");
-      window.top.location.reload();
-      // Return a pending promise to prevent further processing/errors
+      console.log("Auth failed - redirecting to exitiframe");
+      
+      // Use Shopify's exitIframe redirect pattern
+      const shopOrigin = new URLSearchParams(window.location.search).get('shop') || 'trustscore-test.myshopify.com';
+      const redirectUrl = `${window.location.origin}/exitiframe?shop=${shopOrigin}`;
+      
+      window.location.href = redirectUrl;
       return new Promise(() => {});
     }
 
