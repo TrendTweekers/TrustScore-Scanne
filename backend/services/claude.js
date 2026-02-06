@@ -30,11 +30,10 @@ const analyzeStoreWithAI = async (payload) => {
             - Score Breakdown: ${JSON.stringify(payload.breakdown)}
             
             Based on this data, provide a structured qualitative assessment in JSON format with the following fields:
-            - "grade": A number between 1-10 rating the overall trust & conversion capability.
-            - "summary": A single, punchy 1-sentence summary of the store's current state (e.g., "Great foundation, but missing critical trust signals on the product page.").
-            - "issues": An array of 3-4 strings describing exactly what is wrong. Be specific and brutal (e.g., "Footer lacks 'Terms of Service' link," "Product description is generic text block").
-            - "competitor_advantages": An array of 2-3 strings listing what top competitors do better (e.g., "Competitors use '100% Satisfaction Guarantee' badge above fold").
-            - "fix_steps": An array of strings containing exact, actionable fix steps using Shopify-specific terms (e.g., "Install 'Judge.me' for reviews," "Add 'Free Shipping' bar via Theme Editor").
+            - "designScore": A number between 1-10 rating the overall professional design quality.
+            - "assessment": A single, punchy 1-sentence summary of the store's current trust state (e.g., "Great foundation, but missing critical trust signals on the product page.").
+            - "nicheComparison": A short sentence comparing this store to top players in the niche (e.g., "Lacks the polished branding seen in top fashion stores").
+            - "priorityFixes": An array of 3 specific, actionable fix steps using Shopify-specific terms (e.g., "Install 'Judge.me' for reviews," "Add 'Free Shipping' bar via Theme Editor").
             
             Be specific. Cite the text or signals found in the raw data. Use specific examples. Quantify impact where possible.
             
@@ -57,11 +56,15 @@ const analyzeStoreWithAI = async (payload) => {
     
     // Find JSON block if wrapped in markdown
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+    let result;
     if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        result = JSON.parse(jsonMatch[0]);
+    } else {
+        result = JSON.parse(textResponse);
     }
     
-    return JSON.parse(textResponse);
+    console.log("[AI SUCCESS] Parsed result keys:", Object.keys(result));
+    return result;
 
   } catch (err) {
     console.error("[AI ERROR]", err?.response?.data || err.message || err);
