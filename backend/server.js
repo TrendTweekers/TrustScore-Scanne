@@ -313,64 +313,75 @@ app.use('/api', scannerRoutes);
 
 // Billing Route
 const handleBillingRequest = async (req, res) => {
-  console.log("=== BILLING SUBSCRIBE HIT ===");
-  const { plan } = req.query;
-  const session = res.locals.shopify.session;
-  
-  console.log("Plan:", plan);
-  console.log("Shop:", session?.shop);
-  console.log("Session exists:", !!session);
-
-  if (!BILLING_PLANS[plan]) {
-    console.error("Invalid plan requested:", plan);
-    return res.status(400).json({ error: 'Invalid plan' });
-  }
-
-  const isTest = process.env.NODE_ENV !== 'production';
-  console.log("Is Test Mode:", isTest);
-
   try {
-    // Use request() but check if we can pass params directly if config fails
-    // However, for strict compatibility with older methods or avoiding config dependency:
-    // We will stick to request() but ensure plan name matches exactly what we configured.
-    // If user insists on createCharge or similar, we should check if it exists, but it likely doesn't in v11.
-    // The issue is likely that "request" ONLY takes "plan" string, and ignores the rest.
+    const session = res.locals.shopify.session;
+    const plan = req.query.plan;
     
-    // BUT, since we updated the config to match, it SHOULD work.
-    // If it's still failing, maybe we need to use `shopify.api.billing.request({ ... })` with the correct signature.
-    
-    // Let's TRY to use the method the user suggested, assuming they know about a method I can't find,
-    // OR revert to a manual GraphQL mutation if all else fails.
-    
-    // WAIT: The user said "Change from request({...}) to createCharge({...})".
-    // I will try to follow this instruction, but fallback to request if it fails.
-    // Actually, I'll modify the code to try to use the "request" method but with a clean object 
-    // that relies on the configuration we just fixed.
-    
-    // Re-reading user input: "Switch to the NEW billing API that supports inline configuration: await shopify.api.billing.createCharge({...})"
-    // I will try to use `request` but with the assumption that `createCharge` is what they meant IF it exists.
-    // Since grep failed, I'll stick to `request` but ensure the plan name is perfect.
-    
-    // ACTUALLY, I will try to implement a manual check or just trust the user's "old API" claim.
-    // If "request" is old, maybe `ensure` is the new one?
-    
-    // Let's try to implement `request` with the exact expected params.
-    const confirmationUrl = await shopify.api.billing.request({
-      session,
-      plan: BILLING_PLANS[plan].label,
-      isTest,
-      returnUrl: `${process.env.HOST}/?shop=${session.shop}&billing=success`,
-    });
+    console.log("=== BILLING SUBSCRIBE HIT (MANUAL GRAPHQL) ===");
+    console.log("Plan:", plan);
+    console.log("Shop:", session?.shop);
 
+    if (!BILLING_PLANS[plan]) {
+        return res.status(400).json({ error: 'Invalid plan' });
+    }
+
+    const planConfig = BILLING_PLANS[plan];
+    const returnUrl = `${process.env.HOST}/?shop=${session.shop}&billing=success`;
+    
+    // Manual GraphQL mutation to create charge
+    const client = new shopify.api.clients.Graphql({ session });
+    
+    const mutation = `
+      mutation CreateCharge($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
+        appSubscriptionCreate(
+          name: $name
+          lineItems: [{
+            plan: {
+              appRecurringPricingDetails: {
+                price: $price
+                interval: EVERY_30_DAYS
+              }
+            }
+          }]
+          returnUrl: $returnUrl
+          test: $test
+        ) {
+          appSubscription {
+            id
+          }
+          confirmationUrl
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+    
+    const response = await client.query({
+      data: {
+        query: mutation,
+        variables: {
+          name: planConfig.label,
+          price: { amount: planConfig.amount, currencyCode: planConfig.currencyCode },
+          returnUrl: returnUrl,
+          test: process.env.NODE_ENV !== 'production'
+        }
+      }
+    });
+    
+    const { confirmationUrl, userErrors } = response.body.data.appSubscriptionCreate;
+    
+    if (userErrors.length > 0) {
+      throw new Error(userErrors[0].message);
+    }
+    
     console.log("Billing request successful. Confirmation URL:", confirmationUrl);
     res.json({ confirmationUrl });
+    
   } catch (error) {
-    console.error('Billing request failed:', error);
-    console.error('Error stack:', error.stack);
-    if (error.response) {
-        console.error('Error response data:', JSON.stringify(error.response.data || {}, null, 2));
-    }
-    res.status(500).json({ error: 'Failed to create billing request', details: error.message });
+    console.error("Billing error:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
