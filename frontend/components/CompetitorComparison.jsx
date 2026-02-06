@@ -156,20 +156,37 @@ export function CompetitorComparison({ userPlan, myLatestScore }) {
                     <BlockStack gap="400">
                         <Text variant="headingMd">Competitor Insights</Text>
                         {(() => {
-                            try {
-                                const parsedResult = selectedScan.result ? JSON.parse(selectedScan.result) : null;
-                                if (parsedResult && parsedResult.aiAnalysis) {
-                                    return (
-                                        <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                            <BlockStack gap="200">
-                                                <Text fontWeight="bold">AI Assessment</Text>
-                                                <Text>{parsedResult.aiAnalysis.assessment}</Text>
-                                            </BlockStack>
-                                        </Box>
-                                    );
+                            let parsedResult;
+                            const result = selectedScan.result;
+
+                            if (typeof result === 'string') {
+                                try {
+                                    parsedResult = JSON.parse(result);
+                                } catch (e) {
+                                    console.error("JSON Parse Error:", e);
+                                    parsedResult = null;
                                 }
-                            } catch (e) {
-                                console.error("Error parsing competitor result:", e);
+                            } else {
+                                parsedResult = result;
+                            }
+
+                            if (!parsedResult) {
+                                return (
+                                    <Banner tone="warning">
+                                        Competitor analysis could not be displayed.
+                                    </Banner>
+                                );
+                            }
+
+                            if (parsedResult.aiAnalysis) {
+                                return (
+                                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                        <BlockStack gap="200">
+                                            <Text fontWeight="bold">AI Assessment</Text>
+                                            <Text>{parsedResult.aiAnalysis.assessment}</Text>
+                                        </BlockStack>
+                                    </Box>
+                                );
                             }
                             return <Text tone="subdued">No detailed AI insights available for this scan.</Text>;
                         })()}
