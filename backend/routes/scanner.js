@@ -226,31 +226,51 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
     // 1. Take screenshots and extract raw data
     const puppeteerResult = await takeScreenshots(targetUrl);
 
-    // 2. AI Qualitative Analysis (PRO/PLUS only)
+    // --- AI analysis (PRO/PLUS only) ---
     let aiAnalysis = null;
-    const shopData = await getShop(session.shop) || {}; // Defensive: ensure object exists
-
-    console.log("[SCAN] shop:", session.shop);
-    console.log("[SCAN] plan from DB:", shopData.plan, "ai_usage_count:", shopData.ai_usage_count);
+    const shop = session.shop;
+    const shopData = await getShop(shop) || {}; 
+    
+    // Normalize accessToken to prevent "cannot read property of null" errors
+    const accessToken = shopData.access_token || shopData.accessToken || null;
 
     // Check reset date
     if (shopData.ai_usage_reset_date && new Date(shopData.ai_usage_reset_date) < new Date()) {
-        await resetAIUsage(session.shop);
+        await resetAIUsage(shop);
         shopData.ai_usage_count = 0; 
     }
 
-    // Force AI block to run ONLY when plan is PRO/PLUS (no other gating for now)
-    const plan = shopData.plan || 'FREE';
-    if (['PRO', 'PLUS'].includes(plan)) {
-        console.log("=== ENTERING AI ANALYSIS BLOCK ===");
+    const plan = (shopData?.plan || "FREE").toUpperCase();
+    const aiAllowed = ["PRO", "PLUS"].includes(plan);
+
+    console.log("[SCAN] shop:", shop);
+    console.log("[SCAN] plan from DB:", plan, "ai_usage_count:", shopData?.ai_usage_count);
+
+    if (aiAllowed) {
         try {
-            console.log('Running Claude AI Analysis...');
+            console.log("[AI] starting Claude analysis | shop:", shop);
+
+            // Optional: log whether key exists (does NOT print the key)
+            console.log("[AI] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
+            console.log("[AI] OPENROUTER_API_KEY present:", !!process.env.OPENROUTER_API_KEY);
+
             aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
-            await incrementAIUsage(session.shop);
-        } catch (aiError) {
-            console.error('AI Analysis failed:', aiError);
-            aiAnalysis = { error: aiError.message || String(aiError) };
+            
+            await incrementAIUsage(shop);
+
+            console.log("[AI] success | shop:", shop);
+        } catch (e) {
+            console.error("[AI] FAILED | shop:", shop);
+            console.error(e?.stack || e);
+
+            aiAnalysis = {
+                error: e?.message || String(e),
+                // include a short stack so you can see it in the API response
+                stack: (e?.stack || "").split("\n").slice(0, 8).join("\n"),
+            };
         }
+    } else {
+        console.log("[AI] skipped (plan not allowed):", plan);
     }
 
     // 3. Generate score (include AI analysis if available)
@@ -295,7 +315,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
       aiAnalysis,
       result: {
           ...scoreResult,
-          aiAnalysis
+          aiAnalysis,
       }, 
       screenshots: puppeteerResult.screenshots
     });

@@ -87,7 +87,14 @@ const getShop = (shop) => {
   return new Promise((resolve, reject) => {
     db.get(`SELECT * FROM shops WHERE shop = ?`, [shop], (err, row) => {
       if (err) reject(err);
-      else resolve(row);
+      else {
+        if (row) {
+          // Normalize accessToken: prefer snake_case (if populated) or camelCase, fallback to null
+          // The user noted that sometimes access_token is populated but accessToken is null.
+          row.accessToken = row.access_token || row.accessToken || null;
+        }
+        resolve(row);
+      }
     });
   });
 };
