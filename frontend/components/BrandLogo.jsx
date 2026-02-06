@@ -3,8 +3,8 @@ import { Box, InlineGrid, Text } from '@shopify/polaris';
 
 export function BrandLogo({ size = 28, withWordmark = true, text = "TrustScore" }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <div style={{ minWidth: `${size}px`, height: `${size}px`, display: 'flex' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ minWidth: `${size}px`, height: `${size}px`, display: 'flex', flexShrink: 0 }}>
         <svg 
             width={size} 
             height={size} 
@@ -21,7 +21,15 @@ export function BrandLogo({ size = 28, withWordmark = true, text = "TrustScore" 
         </svg>
       </div>
       {withWordmark && (
-        <Text variant="headingSm" tone="subdued">{text}</Text>
+        <span style={{ 
+            fontFamily: '-apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+            fontWeight: 600,
+            fontSize: '20px',
+            color: '#202223',
+            lineHeight: 1
+        }}>
+            {text}
+        </span>
       )}
     </div>
   );

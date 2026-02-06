@@ -176,15 +176,19 @@ function Dashboard() {
   return (
     <Page title="TrustScore">
       {selectedTab === 0 && (
-        <Box paddingBlockEnd="400">
+        <Box paddingBlockStart="400" paddingBlockEnd="200" paddingInlineStart="400" paddingInlineEnd="400">
            <InlineGrid columns="1fr auto" alignItems="center">
-             <BrandLogo size={28} withWordmark />
+             <BrandLogo size={32} withWordmark />
              <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
                 {scanCount === 0 ? 'Run Trust Audit (60s)' : 'Run Trust Audit'}
              </Button>
            </InlineGrid>
         </Box>
       )}
+
+      <Box paddingInlineStart="400" paddingInlineEnd="400" paddingBlockEnd="400">
+           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
+      </Box>
 
       <OnboardingModal 
         open={showOnboarding} 
@@ -205,25 +209,22 @@ function Dashboard() {
         onUpgrade={handleUpgrade}
       />
 
-      <Layout>
-        {selectedTab === 0 && !revenueBracket && (
-            <Layout.Section>
-                <CalloutCard
-                    title="Set your monthly revenue to personalize your TrustScore"
-                    illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
-                    primaryAction={{
-                        content: 'Set Revenue',
-                        onAction: handleOpenRevenueModal
-                    }}
-                >
-                    <p>We use your revenue to estimate how much you're losing due to trust issues.</p>
-                </CalloutCard>
-            </Layout.Section>
-        )}
-        <Layout.Section>
-             <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
-        </Layout.Section>
+      {selectedTab === 0 && !revenueBracket && (
+        <Box paddingInlineStart="400" paddingInlineEnd="400" paddingBlockEnd="400">
+            <CalloutCard
+                title="Set your monthly revenue to personalize your TrustScore"
+                illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8dbad5ae1c456c37ce773148b3080.png"
+                primaryAction={{
+                    content: 'Set Revenue',
+                    onAction: handleOpenRevenueModal
+                }}
+            >
+                <p>We use your revenue to estimate how much you're losing due to trust issues.</p>
+            </CalloutCard>
+        </Box>
+      )}
 
+      <Layout>
         {selectedTab === 0 ? (
             <>
                 {/* Unified Hero Section */}
@@ -273,7 +274,7 @@ function Dashboard() {
                                                 )
                                             ) : (
                                                 <Text variant="bodySm" tone="subdued">
-                                                    <Button variant="plain" onClick={handleOpenRevenueModal}>Set revenue</Button> to see estimate.
+                                                    Revenue estimate requires your monthly revenue. <Button variant="plain" onClick={handleOpenRevenueModal}>Set revenue</Button>
                                                 </Text>
                                             )}
                                         </BlockStack>
@@ -348,61 +349,57 @@ function Dashboard() {
                      </Layout.Section>
                 )}
 
-                {/* Stats Overview REMOVED - Merged into Hero */}
-                
-                {/* Score Chart */}
+                {/* Main Content Area */}
                 <Layout.Section>
-                    <ScoreChart />
+                    <BlockStack gap="500">
+                        <ScoreChart />
+
+                        {/* Loading State for Scan */}
+                        {loading && !scanResult && (
+                            <Card>
+                                 <BlockStack gap="500" align="center">
+                                     <BlockStack gap="200" align="center">
+                                        <Spinner size="large" />
+                                        <Text variant="headingLg">Running Trust Audit...</Text>
+                                     </BlockStack>
+                                     
+                                     <Box width="100%" maxWidth="400px">
+                                         <BlockStack gap="400">
+                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
+                                                 <Icon source={CheckCircleIcon} tone="success" />
+                                                 <Text>Capturing screenshots (Desktop & Mobile)</Text>
+                                             </InlineGrid>
+                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
+                                                 <Icon source={CheckCircleIcon} tone="success" />
+                                                 <Text>Analyzing 25+ trust signals</Text>
+                                             </InlineGrid>
+                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
+                                                 <Icon source={CheckCircleIcon} tone="success" />
+                                                 <Text>Calculating Trust Score</Text>
+                                             </InlineGrid>
+                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
+                                                 <Spinner size="small" />
+                                                 <Text fontWeight="bold">Generating AI Insights (Claude)</Text>
+                                             </InlineGrid>
+                                         </BlockStack>
+                                     </Box>
+                                 </BlockStack>
+                            </Card>
+                        )}
+
+                        {/* Scan Result */}
+                        {scanResult && !loading && (
+                            <TrustScore 
+                                result={scanResult} 
+                                plan={plan}
+                                aiUsageCount={aiUsage}
+                                onUpgrade={() => setShowUpgradeModal(true)}
+                            />
+                        )}
+                    </BlockStack>
                 </Layout.Section>
 
-                {/* Loading State for Scan */}
-                {loading && !scanResult && (
-                    <Layout.Section>
-                        <Card>
-                             <BlockStack gap="500" align="center">
-                                 <BlockStack gap="200" align="center">
-                                    <Spinner size="large" />
-                                    <Text variant="headingLg">Running Trust Audit...</Text>
-                                 </BlockStack>
-                                 
-                                 <Box width="100%" maxWidth="400px">
-                                     <BlockStack gap="400">
-                                         <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Icon source={CheckCircleIcon} tone="success" />
-                                             <Text>Capturing screenshots (Desktop & Mobile)</Text>
-                                         </InlineGrid>
-                                         <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Icon source={CheckCircleIcon} tone="success" />
-                                             <Text>Analyzing 25+ trust signals</Text>
-                                         </InlineGrid>
-                                         <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Icon source={CheckCircleIcon} tone="success" />
-                                             <Text>Calculating Trust Score</Text>
-                                         </InlineGrid>
-                                         <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                             <Spinner size="small" />
-                                             <Text fontWeight="bold">Generating AI Insights (Claude)</Text>
-                                         </InlineGrid>
-                                     </BlockStack>
-                                 </Box>
-                             </BlockStack>
-                        </Card>
-                    </Layout.Section>
-                )}
-
-                {/* Scan Result */}
-                {scanResult && !loading && (
-                    <Layout.Section>
-                        <TrustScore 
-                            result={scanResult} 
-                            plan={plan}
-                            aiUsageCount={aiUsage}
-                            onUpgrade={() => setShowUpgradeModal(true)}
-                        />
-                    </Layout.Section>
-                )}
-
-                {/* History & Info */}
+                {/* Sidebar */}
                 <Layout.Section variant="oneThird">
                      <BlockStack gap="500">
                          <ScoreInfo />
