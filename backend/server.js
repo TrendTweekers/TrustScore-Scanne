@@ -129,6 +129,13 @@ const shopify = shopifyApp({
     }
   }
 });
+
+// Debug: Verify Billing Config
+console.log("=== SHOPIFY APP CONFIG ===");
+console.log("Billing Configured:", JSON.stringify(shopify.config.billing, null, 2));
+console.log("Billing Plans Constant:", JSON.stringify(BILLING_PLANS, null, 2));
+console.log("Billing Interval Defined:", !!BillingInterval, BillingInterval);
+
 console.log('Session cookie configured with SameSite=none; Secure');
 
 const getPlanCode = (name) => {
