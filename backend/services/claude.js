@@ -6,7 +6,7 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const analyzeStoreWithClaude = async (payload) => {
+const analyzeStoreWithAI = async (payload) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn('ANTHROPIC_API_KEY is missing. Skipping AI analysis.');
     return null;

@@ -2,7 +2,7 @@ const express = require('express');
 const { takeScreenshots } = require('../services/puppeteer.js');
 const { calculateTrustScore } = require('../services/scoring.js');
 const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount, updateShopRevenue, incrementAIUsage, resetAIUsage, normalizeShop } = require('../db.js');
-const { analyzeStoreWithClaude } = require('../services/claude.js');
+const { analyzeStoreWithAI } = require('../services/claude.js');
 const { sendScoreDropAlert } = require('../services/email.js');
 const { checkBillingMiddleware } = require('../middleware/billing.js');
 
