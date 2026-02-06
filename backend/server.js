@@ -195,54 +195,98 @@ app.get(
 
 app.get(
   shopify.config.auth.callbackPath,
-  (req, res, next) => {
-    console.log("=== /api/auth/callback HIT ===");
-    console.log("Query params:", req.query);
-    console.log("Shop:", req.query.shop);
-    console.log("Code present:", !!req.query.code);
-    console.log("HMAC present:", !!req.query.hmac);
-    next();
-  },
-  shopify.auth.callback(),
   async (req, res) => {
-    try {
-      const session = res.locals.shopify.session;
-      
-      // If session exists, OAuth worked despite cookie error
-      if (session) {
-        console.log("OAuth completed successfully:", session.shop);
-        
-        // Create/update shop record
-        const existing = await getShop(session.shop);
-        
-        if (!existing) {
-          await new Promise((resolve, reject) => {
-            db.run(
-              `INSERT INTO shops (shop, accessToken, scope, plan, created_at, isActive) 
-               VALUES (?, ?, ?, 'FREE', datetime('now'), 1)`,
-              [session.shop, session.accessToken, session.scope],
-              (err) => err ? reject(err) : resolve()
-            );
-          });
-        } else {
-           await new Promise((resolve, reject) => {
-            db.run(
-              `UPDATE shops SET accessToken = ?, scope = ?, isActive = 1 WHERE shop = ?`,
-              [session.accessToken, session.scope, session.shop],
-              (err) => err ? reject(err) : resolve()
-            );
-           });
-        }
-        
-        // Redirect to app
-        return res.redirect(`/?shop=${session.shop}`);
-      }
-    } catch (error) {
-      console.error("OAuth callback error:", error);
+    console.log("=== CUSTOM /api/auth/callback HIT ===");
+    console.log("Query params:", req.query);
+    const { shop, code, state, host, hmac } = req.query;
+
+    if (!shop || !code || !hmac) {
+      console.error("Missing required query parameters");
+      return res.status(400).send("Missing required query parameters");
     }
-    
-    // If no session, retry OAuth
-    return res.redirect(`/api/auth?shop=${req.query.shop}`);
+
+    try {
+      // 1. Validate HMAC
+      const isSafe = await shopify.api.utils.validateHmac(req.query);
+      if (!isSafe) {
+        console.error("HMAC Validation Failed");
+        return res.status(400).send("Invalid HMAC");
+      }
+
+      // 2. Exchange Code for Access Token
+      const accessTokenQuery = new URLSearchParams({
+        client_id: process.env.SHOPIFY_API_KEY,
+        client_secret: process.env.SHOPIFY_API_SECRET,
+        code,
+      }).toString();
+
+      console.log("Exchanging access token...");
+      const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: accessTokenQuery
+      });
+
+      const tokenData = await tokenResponse.json();
+      
+      if (!tokenData.access_token) {
+        console.error("Failed to exchange access token:", tokenData);
+        return res.status(400).send("Token exchange failed");
+      }
+
+      console.log("Token exchange successful");
+      const { access_token: accessToken, scope } = tokenData;
+
+      // 3. Create and Store Session
+      const sessionId = shopify.api.session.getOfflineId(shop);
+      const session = new shopify.api.Session({
+        id: sessionId,
+        shop,
+        state: state || '',
+        isOnline: false,
+      });
+      session.accessToken = accessToken;
+      session.scope = scope;
+
+      console.log(`Storing session for ${shop} (ID: ${sessionId})`);
+      await shopify.config.sessionStorage.storeSession(session);
+
+      // 4. Update Database (Preserve existing logic)
+      const existing = await getShop(shop);
+      
+      if (!existing) {
+        await new Promise((resolve, reject) => {
+          db.run(
+            `INSERT INTO shops (shop, accessToken, scope, plan, created_at, isActive) 
+             VALUES (?, ?, ?, 'FREE', datetime('now'), 1)`,
+            [shop, accessToken, scope],
+            (err) => err ? reject(err) : resolve()
+          );
+        });
+      } else {
+         await new Promise((resolve, reject) => {
+          db.run(
+            `UPDATE shops SET accessToken = ?, scope = ?, isActive = 1 WHERE shop = ?`,
+            [accessToken, scope, shop],
+            (err) => err ? reject(err) : resolve()
+          );
+         });
+      }
+      
+      console.log("OAuth completed successfully. Redirecting to app...");
+      
+      // 5. Redirect to App
+      // Include host for App Bridge
+      const redirectUrl = `/?shop=${shop}&host=${host}`;
+      return res.redirect(redirectUrl);
+
+    } catch (error) {
+      console.error("Custom OAuth callback error:", error);
+      return res.status(500).send("OAuth failed: " + error.message);
+    }
   }
 );
 
