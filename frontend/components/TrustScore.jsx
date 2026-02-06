@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button, Badge, Divider } from '@shopify/polaris';
-import { InfoIcon, ClockIcon, CashDollarIcon, WrenchIcon, MagicIcon, ArrowRightIcon, ExternalLinkIcon } from '@shopify/polaris-icons';
+import { InfoIcon, ClockIcon, CashDollarIcon, WrenchIcon, MagicIcon, ArrowRightIcon } from '@shopify/polaris-icons';
 import { trackEvent } from '../utils/analytics';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
@@ -392,7 +392,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket }) {
                                           <Button 
                                               variant="primary" 
                                               tone="success"
-                                              icon={ExternalLinkIcon}
+                                              icon={ArrowRightIcon}
                                               onClick={() => window.open('https://apps.shopify.com/search?q=trust+badges', '_blank')}
                                           >
                                               Open Trust Badge Builder
