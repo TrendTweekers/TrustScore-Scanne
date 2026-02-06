@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Text, TextField, Button, BlockStack, InlineGrid, Banner, List, Box, ProgressBar, Divider, Spinner, Link, Badge } from '@shopify/polaris';
+import { Card, Text, TextField, Button, BlockStack, InlineGrid, Banner, List, Box, ProgressBar, Divider, Spinner, Link, Badge, Icon } from '@shopify/polaris';
+import { SearchIcon, ChartVerticalIcon, ShieldCheckMarkIcon } from '@shopify/polaris-icons';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
 
@@ -96,6 +97,12 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
     }
   };
 
+  // Helper to get breakdown item
+  const getMyBreakdownItem = (category) => {
+      if (!myLatestScan || !myLatestScan.result || !myLatestScan.result.breakdown) return null;
+      return myLatestScan.result.breakdown.find(b => b.category === category);
+  };
+
   if (userPlan === 'FREE') {
       return (
           <BlockStack gap="800">
@@ -118,46 +125,60 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                 </BlockStack>
             </Card>
 
-            <div style={{ position: 'relative', filter: 'blur(6px)', userSelect: 'none', opacity: 0.6 }}>
-                <Card>
-                    <BlockStack gap="500">
-                        <Text variant="headingLg">Comparison Result</Text>
-                        <Box background="bg-surface-warning" padding="500" borderRadius="200">
-                            <BlockStack gap="200" align="center">
-                                <Text variant="headingLg" tone="caution">Trust Gap: 12 Points</Text>
-                                <Text>Your store: 65 | Competitor: 77</Text>
+            <div style={{ position: 'relative' }}>
+                <div style={{ filter: 'blur(8px)', userSelect: 'none', opacity: 0.5, pointerEvents: 'none' }}>
+                    <Card>
+                        <BlockStack gap="500">
+                            <Text variant="headingLg">Comparison Result</Text>
+                            <Box background="bg-surface-critical" padding="500" borderRadius="200">
+                                <BlockStack gap="200" align="center">
+                                    <Text variant="headingLg" tone="critical">CRITICAL GAP: 24 POINTS</Text>
+                                    <Text>Your store: 53 | Competitor: 77</Text>
+                                </BlockStack>
+                            </Box>
+                            <InlineGrid columns={{ xs: 1, sm: 2 }} gap="800">
+                                 <BlockStack gap="400">
+                                    <Text variant="headingMd">Your Store</Text>
+                                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                        <Text variant="heading3xl">53/100</Text>
+                                    </Box>
+                                 </BlockStack>
+                                 <BlockStack gap="400">
+                                    <Text variant="headingMd">Competitor</Text>
+                                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                                        <Text variant="heading3xl">77/100</Text>
+                                    </Box>
+                                 </BlockStack>
+                            </InlineGrid>
+                            <Text variant="headingMd">Trust Breakdown</Text>
+                            <BlockStack gap="300">
+                                <Box padding="300" background="bg-surface-secondary"><Text>Trust Badges: You 0/25 vs Them 25/25</Text></Box>
+                                <Box padding="300" background="bg-surface-secondary"><Text>Security: You 10/20 vs Them 20/20</Text></Box>
+                                <Box padding="300" background="bg-surface-secondary"><Text>Social Proof: You 5/15 vs Them 12/15</Text></Box>
                             </BlockStack>
-                        </Box>
-                        <InlineGrid columns={{ xs: 1, sm: 2 }} gap="800">
-                             <BlockStack gap="400">
-                                <Text variant="headingMd">Your Store</Text>
-                                <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                    <Text variant="heading3xl">65/100</Text>
-                                </Box>
-                             </BlockStack>
-                             <BlockStack gap="400">
-                                <Text variant="headingMd">Competitor</Text>
-                                <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                    <Text variant="heading3xl">77/100</Text>
-                                </Box>
-                             </BlockStack>
-                        </InlineGrid>
-                    </BlockStack>
-                </Card>
-            </div>
-            
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10, textAlign: 'center', width: '100%', maxWidth: '400px' }}>
-                <Card>
-                    <BlockStack gap="400" align="center">
-                        <Text variant="headingMd">Unlock Competitive Intelligence</Text>
-                        <Text alignment="center">
-                            See exactly why competitors are beating you. Get a full breakdown of their trust score and copy their winning strategies.
-                        </Text>
-                        <Button variant="primary" onClick={() => window.open('/?billing=upgrade', '_top')}>
-                            Upgrade to Pro to Unlock
-                        </Button>
-                    </BlockStack>
-                </Card>
+                        </BlockStack>
+                    </Card>
+                </div>
+                
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10, textAlign: 'center', width: '90%', maxWidth: '500px' }}>
+                    <Card>
+                        <BlockStack gap="400" align="center">
+                            <InlineGrid gap="200" align="center">
+                                <Icon source={SearchIcon} tone="magic" />
+                                <Text variant="headingLg">Unlock Competitive Intelligence</Text>
+                            </InlineGrid>
+                            <Text alignment="center" as="p">
+                                See exactly why competitors are beating you. Get a full breakdown of their trust score, AI-detected winning strategies, and estimated revenue gaps.
+                            </Text>
+                            <Box paddingBlockStart="200">
+                                <Button size="large" variant="primary" onClick={() => window.open('/?billing=upgrade', '_top')}>
+                                    Upgrade to Pro to Unlock
+                                </Button>
+                            </Box>
+                            <Text variant="bodySm" tone="subdued">Starting at $19/mo. Cancel anytime.</Text>
+                        </BlockStack>
+                    </Card>
+                </div>
             </div>
           </BlockStack>
       );
@@ -210,7 +231,9 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
         {!selectedScan && !loading && scans.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
                 <BlockStack gap="400" align="center">
-                    <div style={{ fontSize: '48px' }}>🕵️‍♂️</div>
+                    <Box padding="400" background="bg-surface-secondary" borderRadius="full">
+                        <Icon source={SearchIcon} tone="subdued" />
+                    </Box>
                     <Text variant="headingLg" tone="subdued">No Competitor Audits Yet</Text>
                     <Text as="p" tone="subdued">
                         Enter a competitor's URL above to see how their TrustScore compares to yours.
@@ -222,6 +245,7 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
         )}
 
         {selectedScan && !loading && (
+            <BlockStack gap="600">
             <Card>
                 <BlockStack gap="500">
                     <Text variant="headingLg" as="h3">Comparison Result</Text>
@@ -239,10 +263,13 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                         if (gap > 25) {
                             return (
                                 <Box background="bg-surface-critical" padding="500" borderRadius="200" borderWidth="1" borderColor="border-critical">
-                                    <BlockStack gap="200" align="center">
-                                        <Text variant="headingXl" tone="critical">
-                                            CRITICAL GAP: {gapValue} POINTS
-                                        </Text>
+                                    <BlockStack gap="400" align="center">
+                                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
+                                            <Icon source={ShieldCheckMarkIcon} tone="critical" />
+                                            <Text variant="headingXl" tone="critical">
+                                                CRITICAL GAP: {gapValue} POINTS
+                                            </Text>
+                                        </InlineGrid>
                                         <Text variant="bodyLg" fontWeight="bold" tone="critical">
                                             ⚠️ You are losing ~14% market share to this competitor due to lower Trust.
                                         </Text>
@@ -253,9 +280,12 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                             return (
                                 <Box background="bg-surface-warning" padding="500" borderRadius="200" borderWidth="1" borderColor="border-warning">
                                     <BlockStack gap="200" align="center">
-                                        <Text variant="headingLg" tone="caution">
-                                            Trust Gap: {gapValue} Points
-                                        </Text>
+                                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
+                                             <Icon source={ChartVerticalIcon} tone="caution" />
+                                             <Text variant="headingLg" tone="caution">
+                                                 Trust Gap: {gapValue} Points
+                                             </Text>
+                                        </InlineGrid>
                                         <Text variant="bodyMd">
                                             Your store: {myLatestScore} | Competitor: {selectedScan.score}
                                         </Text>
@@ -266,9 +296,12 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                             return (
                                 <Box background="bg-surface-success" padding="500" borderRadius="200" borderWidth="1" borderColor="border-success">
                                     <BlockStack gap="200" align="center">
-                                        <Text variant="headingXl" tone="success">
-                                            YOU ARE LEADING BY {gapValue} POINTS
-                                        </Text>
+                                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
+                                             <Icon source={ShieldCheckMarkIcon} tone="success" />
+                                             <Text variant="headingXl" tone="success">
+                                                 YOU ARE LEADING BY {gapValue} POINTS
+                                             </Text>
+                                        </InlineGrid>
                                         <Text variant="bodyMd" fontWeight="bold">
                                             Your store: {myLatestScore} | Competitor: {selectedScan.score}
                                         </Text>
@@ -292,11 +325,9 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                                 </BlockStack>
                             </Box>
                         </BlockStack>
-
-                        {/* Competitor Store */}
+                        {/* Competitor */}
                         <BlockStack gap="400">
                             <Text variant="headingMd">Competitor</Text>
-                            <Text tone="subdued" variant="bodySm">{selectedScan.url || selectedScan.competitor_url}</Text>
                             <Box background="bg-surface-secondary" padding="400" borderRadius="200">
                                 <BlockStack gap="200" align="center">
                                     <Text variant="heading3xl">{selectedScan.score}/100</Text>
@@ -305,134 +336,90 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                             </Box>
                         </BlockStack>
                     </InlineGrid>
-                    
+
                     <Divider />
-
-                    {(() => {
-                        const parseResult = (r) => {
-                            if (!r) return null;
-                            if (typeof r === 'string') {
-                                try { return JSON.parse(r); } catch(e) { return null; }
-                            }
-                            return r;
-                        };
-                        
-                        const myResult = parseResult(myLatestScan?.result);
-                        const compResult = parseResult(selectedScan?.result);
-                        
-                        // Align factors
-                        const myFactors = myResult?.breakdown || [];
-                        const compFactors = compResult?.breakdown || [];
-                        
-                        // Merge by label if we have data, otherwise just show competitor data
-                        // If myFactors is empty (e.g. legacy data), we can't do gap analysis properly
-                        const factors = compFactors.map(f => {
-                            const myF = myFactors.find(m => m.label === f.label) || { score: 0 };
-                            return {
-                                label: f.label,
-                                myScore: myF.score,
-                                compScore: f.score,
-                                max: f.maxScore || 10,
-                                gap: f.score - myF.score // Positive means competitor is better
-                            };
-                        });
-                        
-                        // Top 3 Gap Drivers (where I am losing most)
-                        const drivers = [...factors]
-                            .filter(f => f.gap > 0)
-                            .sort((a, b) => b.gap - a.gap)
-                            .slice(0, 3);
+                    
+                    {/* TRUST GAP BREAKDOWN */}
+                    <Text variant="headingLg">Trust Gap Breakdown</Text>
+                    <BlockStack gap="400">
+                        {selectedScan.result && selectedScan.result.breakdown && selectedScan.result.breakdown.map((item, index) => {
+                            const myItem = getMyBreakdownItem(item.category);
+                            const myPoints = myItem ? myItem.points : 0;
+                            const compPoints = item.points;
+                            const diff = compPoints - myPoints;
                             
-                        return (
-                            <BlockStack gap="600">
-                                {/* Top 3 Drivers */}
-                                <Card>
-                                    <BlockStack gap="400">
-                                        <Text variant="headingMd">Top 3 Gap Drivers</Text>
-                                        <Text tone="subdued">The competitor is beating you most in these areas:</Text>
-                                        {drivers.length > 0 ? (
-                                            <List type="number">
-                                                {drivers.map((d, i) => (
-                                                    <List.Item key={i}>
-                                                        <Text fontWeight="bold">{d.label}</Text> (They are +{d.gap} points ahead)
-                                                    </List.Item>
-                                                ))}
-                                            </List>
-                                        ) : (
-                                            <Text tone="success">You are leading or tied in all factors!</Text>
-                                        )}
+                            return (
+                                <Box key={index} padding="400" background="bg-surface-secondary" borderRadius="200">
+                                    <BlockStack gap="200">
+                                        <InlineGrid columns="1fr auto" alignItems="center">
+                                            <Text variant="headingSm">{item.category}</Text>
+                                            {diff > 0 ? (
+                                                <Badge tone="critical">You lost {diff} pts</Badge>
+                                            ) : diff < 0 ? (
+                                                <Badge tone="success">You won {Math.abs(diff)} pts</Badge>
+                                            ) : (
+                                                <Badge tone="info">Tie</Badge>
+                                            )}
+                                        </InlineGrid>
                                         
-                                        {drivers.length > 0 && (
-                                            <Banner tone="info">
-                                                 <Text>
-                                                    To close the gap fastest, <Link onClick={() => {
-                                                        const el = document.getElementById('recommendations-section');
-                                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                                                    }}>fix these items first</Link>.
-                                                 </Text>
-                                            </Banner>
-                                        )}
-                                    </BlockStack>
-                                </Card>
-
-                                {/* Full Breakdown */}
-                                <Card>
-                                    <BlockStack gap="400">
-                                        <Text variant="headingMd">Trust Gap Breakdown</Text>
+                                        {/* Comparison Bars */}
                                         <BlockStack gap="200">
-                                            <InlineGrid columns={['oneHalf', 'oneQuarter', 'oneQuarter']} gap="200">
-                                                 <Text fontWeight="bold" tone="subdued">Factor</Text>
-                                                 <Text fontWeight="bold" tone="subdued" align="end">You</Text>
-                                                 <Text fontWeight="bold" tone="subdued" align="end">Competitor</Text>
+                                            <InlineGrid columns="80px 1fr 40px" alignItems="center" gap="200">
+                                                <Text variant="bodySm" tone="subdued">You</Text>
+                                                <ProgressBar progress={(myPoints / item.maxPoints) * 100} tone={myPoints === item.maxPoints ? 'success' : 'critical'} size="small" />
+                                                <Text variant="bodySm">{myPoints}</Text>
                                             </InlineGrid>
-                                            <Divider />
-                                            {factors.map((f, i) => (
-                                                <Box key={i} paddingBlockStart="300" paddingBlockEnd="300">
-                                                    <InlineGrid columns={['oneHalf', 'oneQuarter', 'oneQuarter']} gap="400" alignItems="center">
-                                                        <BlockStack gap="100">
-                                                            <Text fontWeight="bold">{f.label}</Text>
-                                                            {f.gap > 0 && <Text tone="critical" variant="bodyXs">-{f.gap} pts gap</Text>}
-                                                        </BlockStack>
-                                                        
-                                                        <BlockStack gap="100" align="end">
-                                                            <Text fontWeight="bold">{f.myScore}/{f.max}</Text>
-                                                            <ProgressBar progress={(f.myScore / f.max) * 100} size="small" tone={f.myScore >= f.max ? 'success' : 'critical'} />
-                                                        </BlockStack>
-                                                        
-                                                        <BlockStack gap="100" align="end">
-                                                            <Text fontWeight="bold">{f.compScore}/{f.max}</Text>
-                                                            <ProgressBar progress={(f.compScore / f.max) * 100} size="small" tone={f.compScore >= f.max ? 'success' : 'critical'} />
-                                                        </BlockStack>
-                                                    </InlineGrid>
-                                                </Box>
-                                            ))}
+                                            <InlineGrid columns="80px 1fr 40px" alignItems="center" gap="200">
+                                                <Text variant="bodySm" tone="subdued">Them</Text>
+                                                <ProgressBar progress={(compPoints / item.maxPoints) * 100} tone={compPoints === item.maxPoints ? 'success' : 'critical'} size="small" />
+                                                <Text variant="bodySm">{compPoints}</Text>
+                                            </InlineGrid>
                                         </BlockStack>
                                     </BlockStack>
-                                </Card>
-                                
-                                {/* AI Analysis (Locked or Shown) */}
-                                <Card>
-                                    <BlockStack gap="400">
-                                        <Text variant="headingMd">Competitor Insights (AI)</Text>
-                                        {compResult?.aiAnalysis ? (
-                                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                                <BlockStack gap="200">
-                                                    <Text fontWeight="bold">AI Assessment</Text>
-                                                    <Text>{compResult.aiAnalysis.assessment}</Text>
-                                                </BlockStack>
-                                            </Box>
-                                        ) : (
-                                            <Banner tone="warning">AI analysis not available for this scan.</Banner>
-                                        )}
-                                    </BlockStack>
-                                </Card>
-                            </BlockStack>
-                        );
-                    })()}
+                                </Box>
+                            );
+                        })}
+                    </BlockStack>
+
                     </>
                     )}
                 </BlockStack>
             </Card>
+
+            {/* AI ASSESSMENT CARD */}
+            {selectedScan.aiAnalysis && (
+                <Card>
+                    <BlockStack gap="400">
+                        <InlineGrid columns="auto 1fr" gap="400" alignItems="center">
+                             <Box background="bg-surface-magic" padding="200" borderRadius="100">
+                                <Icon source={SearchIcon} tone="magic" />
+                             </Box>
+                             <Text variant="headingLg">AI Competitor Intelligence</Text>
+                        </InlineGrid>
+                        
+                        <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+                            <BlockStack gap="400">
+                                <Text variant="bodyLg" as="p">
+                                    {selectedScan.aiAnalysis.assessment || "No detailed assessment available."}
+                                </Text>
+                                
+                                {selectedScan.aiAnalysis.priorityFixes && (
+                                    <>
+                                    <Divider />
+                                    <Text variant="headingSm">Winning Strategies Detected:</Text>
+                                    <List type="bullet">
+                                        {selectedScan.aiAnalysis.priorityFixes.map((fix, i) => (
+                                            <List.Item key={i}>{fix}</List.Item>
+                                        ))}
+                                    </List>
+                                    </>
+                                )}
+                            </BlockStack>
+                        </Box>
+                    </BlockStack>
+                </Card>
+            )}
+            </BlockStack>
         )}
 
         {scans.length > 0 && (

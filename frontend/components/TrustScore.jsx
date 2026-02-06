@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button, Badge, Divider } from '@shopify/polaris';
-import { InfoIcon } from '@shopify/polaris-icons';
+import { InfoIcon, ClockIcon, CashDollarIcon, WrenchIcon, MagicIcon, ArrowRightIcon } from '@shopify/polaris-icons';
 import { trackEvent } from '../utils/analytics';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
@@ -314,15 +314,24 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                             {/* Fix Difficulty Tags */}
                             <InlineGrid columns={3} gap="400">
                                <BlockStack gap="100">
-                                   <Text tone="subdued" variant="bodySm">Estimated Lift</Text>
+                                   <InlineGrid columns="auto auto" gap="150" alignItems="center">
+                                       <Icon source={WrenchIcon} tone="success" />
+                                       <Text tone="subdued" variant="bodySm">Estimated Lift</Text>
+                                   </InlineGrid>
                                    <Text fontWeight="bold" tone="success">{meta.lift}</Text>
                                </BlockStack>
                                <BlockStack gap="100">
-                                   <Text tone="subdued" variant="bodySm">Revenue Impact</Text>
+                                   <InlineGrid columns="auto auto" gap="150" alignItems="center">
+                                       <Icon source={CashDollarIcon} tone="success" />
+                                       <Text tone="subdued" variant="bodySm">Revenue Impact</Text>
+                                   </InlineGrid>
                                    <Text fontWeight="bold" tone="success">{meta.revenue}</Text>
                                </BlockStack>
                                <BlockStack gap="100">
-                                   <Text tone="subdued" variant="bodySm">Fix Time</Text>
+                                   <InlineGrid columns="auto auto" gap="150" alignItems="center">
+                                       <Icon source={ClockIcon} tone="subdued" />
+                                       <Text tone="subdued" variant="bodySm">Fix Time</Text>
+                                   </InlineGrid>
                                    <Text fontWeight="bold">{meta.time}</Text>
                                </BlockStack>
                             </InlineGrid>
@@ -336,9 +345,10 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                                       <Button 
                                           variant="primary" 
                                           tone="success"
+                                          icon={MagicIcon}
                                           onClick={() => window.open(autoFix.url, '_blank')}
                                       >
-                                          ⚡ {autoFix.label}
+                                          {autoFix.label}
                                       </Button>
                                   </Box>
                               )}

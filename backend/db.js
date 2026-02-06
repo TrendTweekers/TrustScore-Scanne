@@ -233,9 +233,19 @@ const adminUpgradeShop = (shop) => {
   });
 };
 
+const getAllShops = () => {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM shops WHERE isActive = 1`, [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
 module.exports = {
   createOrUpdateShop,
   getShop,
+  getAllShops,
   saveScan,
   saveCompetitorScan,
   getScanHistory,

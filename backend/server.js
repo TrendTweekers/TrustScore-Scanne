@@ -23,10 +23,14 @@ const {
   normalizeShop,
   db
 } = require('./db.js');
+const { initScheduler } = require('./scheduler.js');
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
 const path = require('path');
 const helmet = require('helmet');
+
+// Initialize Scheduler
+initScheduler();
 
 const FRONTEND_PATH = path.join(__dirname, '../dist');
 

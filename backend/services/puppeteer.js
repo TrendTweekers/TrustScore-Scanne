@@ -38,19 +38,34 @@ async function takeScreenshots(url) {
     
     // Check for trust badges (simplified heuristic: images with keywords)
     const images = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll('img')).map(img => ({
-            src: img.src,
-            alt: img.alt,
-            top: img.getBoundingClientRect().top
-        }));
+        return Array.from(document.querySelectorAll('img, svg')).map(el => {
+            const isImg = el.tagName === 'IMG';
+            return {
+                src: isImg ? el.src : null,
+                alt: isImg ? el.alt : (el.getAttribute('aria-label') || el.getAttribute('title')),
+                top: el.getBoundingClientRect().top,
+                outerHTML: el.outerHTML
+            };
+        });
     });
 
-    const badgeKeywords = ['trust', 'secure', 'guarantee', 'verified', 'safe', 'payment'];
+    const badgeKeywords = ['trust', 'secure', 'guarantee', 'verified', 'safe', 'payment', 'visa', 'mastercard', 'amex', 'paypal', 'stripe', 'shipping', 'return', 'money back', 'lock', 'shield'];
+    
+    // Check for text-based trust signals
+    const trustTextKeywords = ['free shipping', 'money back', 'secure checkout', 'easy returns', 'warranty', 'satisfaction guarantee', 'privacy policy'];
+    const pageText = result.text.toLowerCase();
+    const foundTextSignals = trustTextKeywords.filter(k => pageText.includes(k));
+
     result.trustBadges.badges = images.filter(img => 
-        badgeKeywords.some(k => (img.src && img.src.includes(k)) || (img.alt && img.alt.toLowerCase().includes(k)))
+        badgeKeywords.some(k => 
+            (img.src && img.src.toLowerCase().includes(k)) || 
+            (img.alt && img.alt.toLowerCase().includes(k)) ||
+            (img.outerHTML && img.outerHTML.toLowerCase().includes(k))
+        )
     );
     result.trustBadges.count = result.trustBadges.badges.length;
-    result.trustBadges.aboveFold = result.trustBadges.badges.filter(b => b.top < 800); // Assume 800px fold
+    result.trustBadges.aboveFold = result.trustBadges.badges.filter(b => b.top < 900); // Increased fold to 900px
+    result.trustBadges.textSignals = foundTextSignals; // Pass text signals to scoring
 
     // Check for key pages in links
     const links = await page.evaluate(() => Array.from(document.querySelectorAll('a')).map(a => a.href.toLowerCase()));

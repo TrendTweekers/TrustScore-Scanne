@@ -29,11 +29,11 @@ const analyzeStoreWithClaude = async (payload) => {
             
             Based on this data, provide a qualitative assessment in JSON format with the following fields:
             - "designScore": A number between 1-10 rating the implied professionalism based on the data.
-            - "assessment": A 2-3 paragraph qualitative assessment of the store's trustworthiness, copy quality, and structure.
-            - "priorityFixes": An array of strings containing the top 3 priority fixes in plain English.
-            - "nicheComparison": A brief comparison to what is expected for similar stores in this niche.
+            - "assessment": A specific 2-3 paragraph analysis of this competitor's trust strategy. Mention specific elements found (e.g. "They use a sticky header with 'Free Shipping' and large trust badges in the footer"). Avoid generic advice.
+            - "priorityFixes": An array of strings containing 3 specific things this store does well that others should copy.
+            - "nicheComparison": A brief comparison to top-tier brands (Nike, Gymshark) based on the observed signals.
             
-            Be critical but constructive. Look for red flags like missing trust signals, poor copy, or structure issues.
+            Be specific. Cite the text or signals found in the raw data.
             
             Raw Text Sample:
             ${(payload.text || "").slice(0, 2000)}

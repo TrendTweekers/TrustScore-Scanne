@@ -397,30 +397,35 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
     console.log("[AI] aiAnalysis type:", typeof aiAnalysis, "keys:", aiAnalysis && Object.keys(aiAnalysis));
     if (aiAnalysis?.error) console.log("[AI] aiAnalysis.error:", aiAnalysis.error);
 
-    // 4. Save to DB
-    // We save the homepage score as the main score for now, or maybe an average?
-    // Let's save the homepage score.
+    // 4. Save to DB and Check for Alerts
     const finalScore = scoreResult.homepage ? scoreResult.homepage.score : scoreResult.score;
     
-    // Check for score drop (if history exists)
-    const history = await getScanHistory(session.shop);
-    if (history.length > 0) {
-        const previousScore = history[0].score;
-        if (finalScore < previousScore) {
-            console.log(`Score dropped for ${session.shop} (${previousScore} -> ${finalScore}). Sending alert...`);
+    try {
+        const history = await getScanHistory(session.shop);
+        
+        if (history && history.length > 0) {
+            const previousScore = history[0].score;
+            const drop = previousScore - finalScore;
             
-            // Fetch shop details to get email
-             try {
-                // Access the API client from the request locals if available, or just use the session
-                // We'll assume the standard way:
-                const client = new res.locals.shopify.clients.Rest({session});
-                const shopInfo = await client.get({path: 'shop'});
-                const email = shopInfo.body.shop.email;
-                await sendScoreDropAlert(email, session.shop, previousScore, finalScore);
-             } catch (e) {
-                console.error('Could not fetch shop email for alert:', e);
-             }
+            // Trigger alert if score dropped by 5 or more
+            if (drop >= 5) {
+                console.log(`[Alert] Score dropped for ${session.shop} (Prev: ${previousScore}, Curr: ${finalScore}, Drop: ${drop}). Sending email...`);
+                
+                // Fetch shop details to get email
+                try {
+                    const client = new res.locals.shopify.clients.Rest({session});
+                    const shopInfo = await client.get({path: 'shop'});
+                    const email = shopInfo.body.shop.email;
+                    await sendScoreDropAlert(email, session.shop, previousScore, finalScore);
+                } catch (e) {
+                    console.error('Could not fetch shop email for alert:', e);
+                    // Fallback to default
+                    await sendScoreDropAlert(null, session.shop, previousScore, finalScore);
+                }
+            }
         }
+    } catch (alertErr) {
+        console.error("Failed to process score drop alert:", alertErr);
     }
 
     await saveScan(session.shop, targetUrl, finalScore, {
@@ -456,6 +461,32 @@ router.get('/history', async (req, res) => {
     } catch (error) {
         console.error('History error:', error);
         res.status(500).json({ error: 'Failed to load history' });
+    }
+});
+
+const { sendWeeklyReport } = require('../services/email');
+
+// --- Monitoring Routes ---
+
+router.post('/monitoring/test-email', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        const { score, trend } = req.body;
+        
+        // Fetch shop email
+        const client = new shopify.clients.Rest({ session });
+        const shopInfo = await client.get({ path: 'shop' });
+        const email = shopInfo.body.shop.email;
+
+        console.log(`[Monitoring] Sending test email to ${email} for ${session.shop}`);
+        
+        // Send report
+        await sendWeeklyReport(email, session.shop, score || 75, trend || 5);
+        
+        res.json({ success: true, message: `Test email sent to ${email}` });
+    } catch (error) {
+        console.error("Failed to send test email:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 

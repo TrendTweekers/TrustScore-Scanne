@@ -8,26 +8,41 @@ function calculateTrustScore(data) {
   const breakdown = [];
   const pages = data.pages || {};
 
-  // 1. Trust Badges Above Fold (25 points)
-  console.log('1. Trust Badges Check:', {
-    count: data.trustBadges ? data.trustBadges.count : 0,
-    aboveFold: data.trustBadges ? data.trustBadges.aboveFold.length : 0
+  // 1. Trust Badges & Signals (25 points)
+  // Check for visual badges OR strong text signals (for minimal/premium brands)
+  const hasVisualBadges = data.trustBadges && data.trustBadges.aboveFold && data.trustBadges.aboveFold.length > 0;
+  const hasTextSignals = data.trustBadges && data.trustBadges.textSignals && data.trustBadges.textSignals.length >= 2;
+
+  console.log('1. Trust Signals Check:', {
+    visual: hasVisualBadges,
+    text: hasTextSignals,
+    textSignals: data.trustBadges?.textSignals
   });
-  if (data.trustBadges && data.trustBadges.aboveFold && data.trustBadges.aboveFold.length > 0) {
+
+  if (hasVisualBadges) {
     score += 25;
-    breakdown.push({ category: 'Trust Badges Above Fold', points: 25, maxPoints: 25, passed: true });
-    console.log('-> Points Added: 25 (Trust Badges found)');
+    breakdown.push({ category: 'Trust Badges', points: 25, maxPoints: 25, passed: true, details: 'Visual badges found above fold' });
+  } else if (hasTextSignals) {
+    score += 20; // Slightly less for text only, but still good
+    breakdown.push({ category: 'Trust Badges', points: 20, maxPoints: 25, passed: true, details: 'Strong text signals found (Free Shipping, Returns, etc.)' });
+    recommendations.push({
+        priority: 'MEDIUM',
+        issue: 'Add Visual Trust Badges',
+        impact: 'Medium',
+        effort: 'Low',
+        estimatedCost: 'Free',
+        howToFix: 'You have good trust text (e.g. "Free Shipping"), but visual icons convert better. Add logos for Visa/Mastercard/PayPal near the checkout button.'
+    });
   } else {
     recommendations.push({
         priority: 'HIGH',
-        issue: 'Missing Trust Badges Above Fold',
+        issue: 'Missing Trust Signals',
         impact: 'High',
         effort: 'Low',
         estimatedCost: 'Free',
-        howToFix: 'Add trust badges (Visa, Mastercard, Norton) above the fold (top 800px) of your homepage. You can use the free "Trust Badge Builder" app from the Shopify App Store to do this in one click.'
+        howToFix: 'Add trust badges (Visa, Mastercard, Norton) above the fold (top 900px). You can use the free "Trust Badge Builder" app from the Shopify App Store.'
     });
-    breakdown.push({ category: 'Trust Badges Above Fold', points: 0, maxPoints: 25, passed: false });
-    console.log('-> Points Added: 0 (No badges above fold)');
+    breakdown.push({ category: 'Trust Badges', points: 0, maxPoints: 25, passed: false });
   }
 
   // 2. SSL/HTTPS (20 points)
@@ -112,13 +127,20 @@ function calculateTrustScore(data) {
     }
   });
   
-  // 4. AI Assessment (15 points max)
+  // 4. AI Assessment (15 points max + Bonus)
   if (data.aiAnalysis) {
       const designScore = data.aiAnalysis.designScore || 5; // 1-10
       const aiPoints = Math.min(15, Math.round((designScore / 10) * 15));
       score += aiPoints;
       breakdown.push({ category: 'AI Design Analysis', points: aiPoints, maxPoints: 15, passed: designScore > 6 });
       
+      // Premium Brand Bonus: High design score implies trust even if badges are subtle
+      if (designScore >= 8) {
+          const bonus = 10;
+          score += bonus;
+          breakdown.push({ category: 'Premium Brand Authority', points: bonus, maxPoints: 10, passed: true, details: 'High-quality design signals detected' });
+      }
+
       if (designScore <= 6) {
           recommendations.push({
               priority: 'MEDIUM',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs, Spinner, Icon, Box, Toast } from '@shopify/polaris';
-import { CheckCircleIcon, NotificationIcon } from '@shopify/polaris-icons';
+import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge, CalloutCard, SkeletonBodyText, SkeletonDisplayText, Tabs, Spinner, Icon, Box, Toast, Tooltip, Modal, Divider } from '@shopify/polaris';
+import { CheckCircleIcon, NotificationIcon, ShieldCheckMarkIcon, ChartVerticalIcon, AlertCircleIcon, ArrowRightIcon, EmailIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
@@ -13,6 +13,100 @@ import { UpgradeModal } from './UpgradeModal';
 import { CompetitorComparison } from './CompetitorComparison';
 import { ScoreChart } from './ScoreChart';
 import { FAQ } from './FAQ';
+
+function MonitoringPreviewModal({ open, onClose, score, trend, shopName }) {
+    const fetch = useAuthenticatedFetch();
+    const [sending, setSending] = useState(false);
+    const [sent, setSent] = useState(false);
+
+    const handleSendTest = async () => {
+        setSending(true);
+        try {
+            const res = await fetch('/api/monitoring/test-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score, trend })
+            });
+            if (res.ok) {
+                setSent(true);
+                setTimeout(() => setSent(false), 3000);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    return (
+        <Modal
+            open={open}
+            onClose={onClose}
+            title="Weekly Trust Report Preview"
+            primaryAction={{
+                content: sent ? 'Sent!' : 'Send Test Email',
+                onAction: handleSendTest,
+                loading: sending,
+                disabled: sent
+            }}
+            secondaryActions={[{ content: 'Close', onAction: onClose }]}
+        >
+            <Modal.Section>
+                <BlockStack gap="400">
+                    <Text as="p">This is exactly what you (and your team) will receive every Monday morning.</Text>
+                    
+                    <Box background="bg-surface-secondary" padding="500" borderRadius="200" borderWidth="1" borderColor="border">
+                        <BlockStack gap="400">
+                            {/* Fake Email Header */}
+                            <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
+                                <Box background="bg-surface-inverse" borderRadius="100" padding="200">
+                                    <Icon source={ShieldCheckMarkIcon} tone="textInverse" />
+                                </Box>
+                                <BlockStack gap="0">
+                                    <Text fontWeight="bold">TrustScore Weekly Report</Text>
+                                    <Text tone="subdued" variant="bodySm">To: {shopName || 'Store Owner'}</Text>
+                                </BlockStack>
+                            </InlineGrid>
+                            
+                            <Divider />
+
+                            {/* Email Body */}
+                            <BlockStack gap="300">
+                                <Text variant="headingLg">Your Trust Score is {score || 75}/100</Text>
+                                <Text as="p">
+                                    Your store's trust score has {trend >= 0 ? 'improved' : 'dropped'} by <Text fontWeight="bold" tone={trend >= 0 ? 'success' : 'critical'}>{Math.abs(trend || 0)} points</Text> this week.
+                                </Text>
+
+                                <Box background="bg-surface" padding="300" borderRadius="200">
+                                    <InlineGrid columns={2} gap="400">
+                                        <BlockStack gap="100">
+                                            <Text tone="subdued" variant="bodySm">Current Score</Text>
+                                            <Text variant="headingXl">{score || 75}</Text>
+                                        </BlockStack>
+                                        <BlockStack gap="100">
+                                            <Text tone="subdued" variant="bodySm">Weekly Trend</Text>
+                                            <Text variant="headingXl" tone={trend >= 0 ? 'success' : 'critical'}>
+                                                {trend > 0 ? '+' : ''}{trend || 5}%
+                                            </Text>
+                                        </BlockStack>
+                                    </InlineGrid>
+                                </Box>
+
+                                <Text as="p">
+                                    {trend < 0 
+                                        ? "⚠️ Action Required: Several trust signals are missing or broken. Check your dashboard to fix them." 
+                                        : "🎉 Great job! You are maintaining a high trust score. Keep optimizing to reach 90+."}
+                                </Text>
+
+                                <Button variant="primary" fullWidth>Open Dashboard</Button>
+                            </BlockStack>
+                        </BlockStack>
+                    </Box>
+                </BlockStack>
+            </Modal.Section>
+        </Modal>
+    );
+}
 
 function Dashboard() {
   const app = useAppBridge();
@@ -42,6 +136,7 @@ function Dashboard() {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
   const [toastMsg, setToastMsg] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const toggleToast = useCallback(() => setToastMsg(null), []);
 
@@ -180,7 +275,7 @@ function Dashboard() {
   const hasScans = scanCount > 0 || history.length > 0;
 
   return (
-    <Page title="TrustScore">
+    <Page title="" fullWidth>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -188,19 +283,21 @@ function Dashboard() {
         }
       `}</style>
 
-      {selectedTab === 0 && (
-        <Box paddingBlockStart="400" paddingBlockEnd="200" paddingInlineStart="400" paddingInlineEnd="400">
-           <InlineGrid columns="1fr auto" alignItems="center">
-             <BrandLogo size={32} withWordmark />
-             <Button variant="primary" onClick={handleScan} disabled={loading} loading={loading}>
-                {scanCount === 0 ? 'Run Trust Audit (60s)' : 'Run Trust Audit'}
-             </Button>
+      {/* Top Banner / Header */}
+      <Box padding="400" background="bg-surface" borderBlockEndWidth="025" borderColor="border-subdued">
+         <InlineGrid columns="1fr auto" alignItems="center">
+           <InlineGrid columns="auto auto" gap="300" alignItems="center">
+              <BrandLogo size={32} withWordmark />
+              <Badge tone="info">Scanner</Badge>
            </InlineGrid>
-        </Box>
-      )}
+           <Button variant="primary" icon={CheckCircleIcon} onClick={handleScan} disabled={loading} loading={loading}>
+              {scanCount === 0 ? 'Run Trust Audit' : 'Run Trust Audit'}
+           </Button>
+         </InlineGrid>
+      </Box>
 
-      <Box paddingInlineStart="400" paddingInlineEnd="400" paddingBlockEnd="400">
-           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
+      <Box padding="400">
+           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} fitted />
       </Box>
 
       <OnboardingModal 
@@ -244,24 +341,30 @@ function Dashboard() {
                 {/* Unified Hero Section */}
                 <Layout.Section>
                     <Card padding="0">
-                        <Box padding="600" background="bg-surface-secondary">
-                            <InlineGrid columns={{ xs: 1, md: ['twoThirds', 'oneThird'] }} gap="600" alignItems="center">
+                        <Box padding="500" background="bg-surface-secondary">
+                            <InlineGrid columns={{ xs: 1, md: ['twoThirds', 'oneThird'] }} gap="500" alignItems="center">
                                 {/* LEFT: Score & Trust Tier */}
                                 <BlockStack gap="400">
                                     <InlineGrid columns="auto auto" gap="400" alignItems="center">
-                                        <Text variant="heading4xl" as="p" fontWeight="bold">
-                                            {hasScans ? `${currentScore}/100` : '--/100'}
-                                        </Text>
+                                        <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                           <Icon source={ShieldCheckMarkIcon} tone={hasScans && currentScore >= 70 ? 'success' : 'subdued'} />
+                                           <Text variant="heading4xl" as="p" fontWeight="bold">
+                                               {hasScans ? `${currentScore}/100` : '--/100'}
+                                           </Text>
+                                        </InlineGrid>
                                         
                                         {hasScans ? (
                                             <BlockStack gap="100">
                                                 <Badge tone={currentScore >= 70 ? 'success' : currentScore >= 40 ? 'attention' : 'critical'} size="large">
-                                                    Trust Tier: {currentScore >= 85 ? 'Elite' : currentScore >= 70 ? 'Trusted' : currentScore >= 40 ? 'Needs Optimization' : 'At Risk'}
+                                                    {currentScore >= 85 ? 'Elite' : currentScore >= 70 ? 'Trusted' : currentScore >= 40 ? 'Needs Optimization' : 'At Risk'}
                                                 </Badge>
                                                 {currentScore < 70 && (
-                                                    <Text tone="critical" fontWeight="bold">
-                                                        ⚠️ Stores at this level typically lose 15–35% of potential conversions.
-                                                    </Text>
+                                                    <InlineGrid columns="auto 1fr" gap="100" alignItems="center">
+                                                        <Icon source={AlertCircleIcon} tone="critical" />
+                                                        <Text tone="critical" fontWeight="bold">
+                                                            Losing ~{currentScore < 40 ? '35%' : '15%'} conversions
+                                                        </Text>
+                                                    </InlineGrid>
                                                 )}
                                             </BlockStack>
                                         ) : (
@@ -270,15 +373,15 @@ function Dashboard() {
                                     </InlineGrid>
 
                                     {/* Revenue Estimator */}
-                                    <Box background="bg-surface" padding="300" borderRadius="200" width="fit-content">
+                                    <Box background="bg-surface" padding="300" borderRadius="200" width="fit-content" shadow="100">
                                         <BlockStack gap="100">
-                                            <Text tone="subdued" variant="bodySm">
-                                                {revenueBracket ? 'Estimated Revenue Being Lost' : 'Estimate Lost Sales'}
+                                            <Text tone="subdued" variant="bodySm" fontWeight="bold">
+                                                {revenueBracket ? 'REVENUE AT RISK' : 'ESTIMATE LOST SALES'}
                                             </Text>
                                             {revenueBracket ? (
                                                 revenueEstimate && (
                                                     <BlockStack gap="0">
-                                                        <Text variant="headingMd" tone="success">
+                                                        <Text variant="headingMd" tone={currentScore >= 70 ? 'success' : 'critical'}>
                                                             {revenueEstimate.text}
                                                         </Text>
                                                         <Text variant="bodyXs" tone="subdued">
@@ -287,9 +390,10 @@ function Dashboard() {
                                                     </BlockStack>
                                                 )
                                             ) : (
-                                                <Text variant="bodySm" tone="subdued">
-                                                    Revenue estimate requires your monthly revenue. <Button variant="plain" onClick={handleOpenRevenueModal}>Set revenue</Button>
-                                                </Text>
+                                                <InlineGrid columns="auto auto" gap="200" alignItems="center">
+                                                    <Text variant="bodySm" tone="subdued">Add revenue to see impact</Text>
+                                                    <Button variant="plain" onClick={handleOpenRevenueModal}>Set revenue</Button>
+                                                </InlineGrid>
                                             )}
                                         </BlockStack>
                                     </Box>
@@ -297,8 +401,8 @@ function Dashboard() {
                                     {/* Stat Chips */}
                                     {hasScans && (
                                         <InlineGrid columns="auto auto auto" gap="300">
-                                            <Badge tone="info">Last audit: {lastScannedText}</Badge>
-                                            <Badge tone={trend >= 0 ? 'success' : 'critical'}>Trend: {trend > 0 ? '+' : ''}{trend}</Badge>
+                                            <Badge tone="info" icon={CheckCircleIcon}>Last: {lastScannedText}</Badge>
+                                            <Badge tone={trend >= 0 ? 'success' : 'critical'} icon={ChartVerticalIcon}>Trend: {trend > 0 ? '+' : ''}{trend}</Badge>
                                             <Badge tone={isFree ? 'attention' : 'success'}>Plan: {plan}</Badge>
                                         </InlineGrid>
                                     )}
@@ -306,7 +410,7 @@ function Dashboard() {
 
                                 {/* RIGHT: Primary Actions */}
                                 <BlockStack gap="300" align="end">
-                                    <Button variant="plain" onClick={() => {
+                                    <Button size="large" icon={ArrowRightIcon} onClick={() => {
                                         const el = document.getElementById('recommendations-section');
                                         if (el) el.scrollIntoView({ behavior: 'smooth' });
                                     }}>
@@ -430,7 +534,11 @@ function Dashboard() {
                                              <Text fontWeight="bold">Weekly Trust Report</Text>
                                              <Text tone="subdued" variant="bodySm">Email summary of score changes</Text>
                                          </BlockStack>
-                                         {isFree ? <Badge tone="subdued">Pro</Badge> : <Badge tone="success">Active</Badge>}
+                                         {isFree ? (
+                                             <Badge tone="subdued">Pro</Badge>
+                                         ) : (
+                                             <Badge tone="success" progress="complete">Active</Badge>
+                                         )}
                                      </InlineGrid>
                                      
                                      <InlineGrid columns="1fr auto" alignItems="center">
@@ -438,15 +546,44 @@ function Dashboard() {
                                              <Text fontWeight="bold">Score Drop Alerts</Text>
                                              <Text tone="subdued" variant="bodySm">Instant email if score drops 5+</Text>
                                          </BlockStack>
-                                         {isFree ? <Badge tone="subdued">Pro</Badge> : <Badge tone="success">Active</Badge>}
+                                         {isFree ? (
+                                             <Badge tone="subdued">Pro</Badge>
+                                         ) : (
+                                             <Badge tone="success" progress="complete">Active</Badge>
+                                         )}
                                      </InlineGrid>
                                      
-                                     {isFree && (
+                                     <Divider />
+                                     
+                                     {/* Usage Counter */}
+                                     <BlockStack gap="200">
+                                         <InlineGrid columns="1fr auto" alignItems="center">
+                                             <Text variant="bodySm" tone="subdued">Alerts sent this month</Text>
+                                             <Text variant="bodySm" fontWeight="bold">0/∞</Text>
+                                         </InlineGrid>
+                                         <Box background="bg-surface-secondary" padding="0" borderRadius="100" style={{ height: '4px', overflow: 'hidden' }}>
+                                             <Box background="bg-fill-success" style={{ width: '0%', height: '100%' }} />
+                                         </Box>
+                                     </BlockStack>
+
+                                     {isFree ? (
                                          <Button fullWidth onClick={() => handleUpgrade('PRO')}>Enable Monitoring</Button>
+                                     ) : (
+                                         <Button fullWidth icon={EmailIcon} onClick={() => setShowPreviewModal(true)}>
+                                             Preview Sample Report
+                                         </Button>
                                      )}
                                 </BlockStack>
                             </BlockStack>
                          </Card>
+                         
+                         <MonitoringPreviewModal 
+                            open={showPreviewModal} 
+                            onClose={() => setShowPreviewModal(false)}
+                            score={currentScore}
+                            trend={trend}
+                            shopName={shopData?.shop || "Your Store"}
+                         />
 
                          <ScoreInfo />
                          <Card>
