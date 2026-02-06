@@ -4,7 +4,7 @@ import { InfoIcon, ClockIcon, CashDollarIcon, WrenchIcon, MagicIcon, ArrowRightI
 import { trackEvent } from '../utils/analytics';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
+function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket }) {
   if (!plan) {
     return null; // prevents React crash during hydration
   }
@@ -66,32 +66,44 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
 
       const getFixMetadata = (issueText) => {
         const text = issueText.toLowerCase();
-        let meta = { time: '15 mins', difficulty: 'Medium', impact: 'Medium', lift: '+3–7%', revenue: '$500–$1.5k/mo' };
-
-        if (text.includes('ssl') || text.includes('https')) {
-            meta = { time: '5 mins', difficulty: 'Easy', impact: 'High', lift: '+12–18%', revenue: '$1.2k–$3.5k/mo' };
-        } else if (text.includes('favicon')) {
-            meta = { time: '2 mins', difficulty: 'Easy', impact: 'Medium', lift: '+2–5%', revenue: '$200–$800/mo' };
-        } else if (text.includes('contact')) {
-            meta = { time: '10 mins', difficulty: 'Easy', impact: 'High', lift: '+6–11%', revenue: '$1.8k–$4.2k/mo' };
-        } else if (text.includes('policy') || text.includes('refund') || text.includes('return')) {
-            meta = { time: '15 mins', difficulty: 'Medium', impact: 'High', lift: '+5–9%', revenue: '$800–$2.1k/mo' };
-        } else if (text.includes('about')) {
-            meta = { time: '20 mins', difficulty: 'Medium', impact: 'Medium', lift: '+3–6%', revenue: '$400–$1.2k/mo' };
-        } else if (text.includes('social')) {
-            meta = { time: '5 mins', difficulty: 'Easy', impact: 'Low', lift: '+2–4%', revenue: '$150–$600/mo' };
-        } else if (text.includes('broken link') || text.includes('404')) {
-            meta = { time: '10 mins', difficulty: 'Medium', impact: 'Medium', lift: '+4–8%', revenue: '$600–$1.8k/mo' };
-        } else if (text.includes('image') || text.includes('quality')) {
-            meta = { time: '30 mins', difficulty: 'Hard', impact: 'High', lift: '+10–14%', revenue: '$1.1k–$2.9k/mo' };
-        } else if (text.includes('speed') || text.includes('performance')) {
-            meta = { time: '45 mins', difficulty: 'Hard', impact: 'High', lift: '+8–15%', revenue: '$1.5k–$3.8k/mo' };
-        } else if (text.includes('review')) {
-            meta = { time: '15 mins', difficulty: 'Medium', impact: 'High', lift: '+15–22%', revenue: '$2.5k–$5.0k/mo' };
-        }
         
-        return meta;
+        // Revenue mapping
+        const revMap = {
+            '$0–$5k': 2500,
+            '$5k–$20k': 12500,
+            '$20k–$50k': 35000,
+            '$50k–$200k': 125000,
+            '$200k+': 250000
+        };
+        const monthlyRev = revMap[revenueBracket] || 2500; // Default conservative base
+
+        let liftMin = 3, liftMax = 7;
+        let time = '15 mins';
+
+        if (text.includes('ssl') || text.includes('https')) { liftMin=12; liftMax=18; time='5 mins'; }
+        else if (text.includes('favicon')) { liftMin=2; liftMax=5; time='2 mins'; }
+        else if (text.includes('contact')) { liftMin=6; liftMax=11; time='10 mins'; }
+        else if (text.includes('policy') || text.includes('refund')) { liftMin=5; liftMax=9; time='15 mins'; }
+        else if (text.includes('about')) { liftMin=3; liftMax=6; time='20 mins'; }
+        else if (text.includes('social')) { liftMin=2; liftMax=4; time='5 mins'; }
+        else if (text.includes('broken link') || text.includes('404')) { liftMin=4; liftMax=8; time='10 mins'; }
+        else if (text.includes('image') || text.includes('quality')) { liftMin=10; liftMax=14; time='30 mins'; }
+        else if (text.includes('speed') || text.includes('performance')) { liftMin=8; liftMax=15; time='45 mins'; }
+        else if (text.includes('review')) { liftMin=15; liftMax=22; time='15 mins'; }
+
+        // Calculate impact
+        const revMin = Math.round(monthlyRev * (liftMin / 100));
+        const revMax = Math.round(monthlyRev * (liftMax / 100));
+
+        const formatMoney = (val) => val >= 1000 ? `$${(val/1000).toFixed(1)}k` : `$${val}`;
+        
+        return { 
+            time, 
+            lift: `+${liftMin}–${liftMax}%`, 
+            revenue: `${formatMoney(revMin)}–${formatMoney(revMax)}/mo` 
+        };
       };
+
 
       const getGaugeColor = (s) => {
           if (s >= 85) return '#004F3F'; // Elite
@@ -215,7 +227,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                 <BlockStack gap="400">
                    <InlineGrid columns="auto auto" gap="200" alignItems="center">
                        <Icon source={InfoIcon} tone="magic" />
-                       <Text variant="headingMd" as="h3">AI Qualitative Analysis (Claude)</Text>
+                       <Text variant="headingMd" as="h3">AI Qualitative Analysis</Text>
                    </InlineGrid>
                    
                    {/* Usage Counter */}
@@ -305,7 +317,22 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                         const autoFix = getAutoFixAction(rec.issue);
                         
                         return (
-                        <Banner key={index} tone={getPriorityColor(rec.priority)}>
+                        <div 
+                          key={index}
+                          style={{ 
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                            cursor: 'default'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                        <Banner tone={getPriorityColor(rec.priority)}>
                           <BlockStack gap="200">
                             <InlineGrid columns="auto auto" gap="200" alignItems="center">
                                 <Text fontWeight="bold" as="h3">
@@ -315,29 +342,31 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                             </InlineGrid>
                             
                             {/* Fix Difficulty Tags */}
-                            <InlineGrid columns={3} gap="400">
-                               <BlockStack gap="100">
-                                   <InlineGrid columns="auto auto" gap="150" alignItems="center">
-                                       <Icon source={WrenchIcon} tone="success" />
-                                       <Text tone="subdued" variant="bodySm">Estimated Lift</Text>
-                                   </InlineGrid>
-                                   <Text fontWeight="bold" tone="success">{meta.lift}</Text>
-                               </BlockStack>
-                               <BlockStack gap="100">
-                                   <InlineGrid columns="auto auto" gap="150" alignItems="center">
-                                       <Icon source={CashDollarIcon} tone="success" />
-                                       <Text tone="subdued" variant="bodySm">Revenue Impact</Text>
-                                   </InlineGrid>
-                                   <Text fontWeight="bold" tone="success">{meta.revenue}</Text>
-                               </BlockStack>
-                               <BlockStack gap="100">
-                                   <InlineGrid columns="auto auto" gap="150" alignItems="center">
-                                       <Icon source={ClockIcon} tone="subdued" />
-                                       <Text tone="subdued" variant="bodySm">Fix Time</Text>
-                                   </InlineGrid>
-                                   <Text fontWeight="bold">{meta.time}</Text>
-                               </BlockStack>
-                            </InlineGrid>
+                            <Box background="bg-surface-secondary" padding="300" borderRadius="200">
+                                <InlineGrid columns={3} gap="400">
+                                   <BlockStack gap="100">
+                                       <InlineGrid columns="auto auto" gap="150" alignItems="center">
+                                           <Icon source={WrenchIcon} tone="success" />
+                                           <Text tone="subdued" variant="bodySm">Estimated Lift</Text>
+                                       </InlineGrid>
+                                       <Text fontWeight="bold" tone="success">{meta.lift}</Text>
+                                   </BlockStack>
+                                   <BlockStack gap="100">
+                                       <InlineGrid columns="auto auto" gap="150" alignItems="center">
+                                           <Icon source={CashDollarIcon} tone="success" />
+                                           <Text tone="subdued" variant="bodySm">Revenue Impact</Text>
+                                       </InlineGrid>
+                                       <Text fontWeight="bold" tone="success">{meta.revenue}</Text>
+                                   </BlockStack>
+                                   <BlockStack gap="100">
+                                       <InlineGrid columns="auto auto" gap="150" alignItems="center">
+                                           <Icon source={ClockIcon} tone="subdued" />
+                                           <Text tone="subdued" variant="bodySm">Fix Time</Text>
+                                       </InlineGrid>
+                                       <Text fontWeight="bold">{meta.time}</Text>
+                                   </BlockStack>
+                                </InlineGrid>
+                            </Box>
     
                             <Box paddingBlockStart="200">
                               <Text fontWeight="bold">How to fix:</Text>
@@ -362,7 +391,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                                 <List>
                                   {rec.resourceLinks.map((link, i) => (
                                      <List.Item key={i}>
-                                       <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: '#2C6ECB', textDecoration: 'underline' }}>
+                                       <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: '#2196F3', textDecoration: 'underline' }}>
                                          {link}
                                        </a>
                                      </List.Item>
@@ -372,7 +401,15 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                             )}
                           </BlockStack>
                         </Banner>
+                        </div>
                       )})}
+
+                      <Box padding="400" alignment="center">
+                          <Text variant="bodySm" tone="subdued" alignment="center">
+                              * Estimates are approximate based on industry benchmarks. Actual results vary.
+                          </Text>
+                      </Box>
+
 
                       {recommendations.length > 3 && (
                           <Button 

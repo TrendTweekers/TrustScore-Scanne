@@ -179,8 +179,8 @@ router.post('/scanner/external', checkBillingMiddleware, async (req, res) => {
         // Since this is a Pro/Plus feature only, we ALWAYS run AI.
         let aiAnalysis = null;
         try {
-            console.log('Running Claude AI Analysis for competitor...');
-            aiAnalysis = await analyzeStoreWithClaude(puppeteerResult.screenshots);
+            console.log('Running AI Analysis for competitor...');
+            aiAnalysis = await analyzeStoreWithAI(puppeteerResult.screenshots);
         } catch (aiError) {
             console.error('AI Analysis failed:', aiError);
         }
@@ -340,7 +340,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
 
     if (aiAllowed) {
         try {
-            console.log("[AI] starting Claude analysis | shop:", shop);
+            console.log("[AI] starting analysis | shop:", shop);
 
             // Optional: log whether key exists (does NOT print the key)
             console.log("[AI] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
@@ -367,7 +367,7 @@ router.post('/scan', checkBillingMiddleware, async (req, res) => {
               breakdown: aiPayload.breakdown?.length || 0,
             });
 
-            aiAnalysis = await analyzeStoreWithClaude(aiPayload);
+            aiAnalysis = await analyzeStoreWithAI(aiPayload);
             
             if (!aiAnalysis || aiAnalysis.error) {
                 console.warn("[AI] Skipping usage increment due to failed analysis");

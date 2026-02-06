@@ -262,6 +262,20 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                         
                         if (gap > 25) {
                             return (
+                                <div 
+                                    style={{ 
+                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                        cursor: 'default'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
                                 <Box background="bg-surface-critical" padding="500" borderRadius="200" borderWidth="1" borderColor="border-critical">
                                     <BlockStack gap="400" align="center">
                                         <InlineGrid columns="auto auto" gap="300" alignItems="center">
@@ -275,9 +289,24 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                                         </Text>
                                     </BlockStack>
                                 </Box>
+                                </div>
                             );
                         } else if (isLosing) {
                             return (
+                                <div 
+                                    style={{ 
+                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                        cursor: 'default'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
                                 <Box background="bg-surface-warning" padding="500" borderRadius="200" borderWidth="1" borderColor="border-warning">
                                     <BlockStack gap="200" align="center">
                                         <InlineGrid columns="auto auto" gap="300" alignItems="center">
@@ -291,9 +320,24 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                                         </Text>
                                     </BlockStack>
                                 </Box>
+                                </div>
                             );
                         } else {
                             return (
+                                <div 
+                                    style={{ 
+                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                        cursor: 'default'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
                                 <Box background="bg-surface-success" padding="500" borderRadius="200" borderWidth="1" borderColor="border-success">
                                     <BlockStack gap="200" align="center">
                                         <InlineGrid columns="auto auto" gap="300" alignItems="center">
@@ -310,6 +354,7 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                                         </Text>
                                     </BlockStack>
                                 </Box>
+                                </div>
                             );
                         }
                     })()}
@@ -396,7 +441,7 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
                              </Box>
                              <BlockStack gap="100">
                                 <Text variant="headingLg">AI Competitor Intelligence</Text>
-                                <Text tone="subdued">Powered by Claude 3.5 Sonnet</Text>
+                                <Text tone="subdued">Powered by Advanced AI</Text>
                              </BlockStack>
                         </InlineGrid>
                         

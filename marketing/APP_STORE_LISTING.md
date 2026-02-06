@@ -9,7 +9,7 @@ Boost conversion rates by fixing trust issues on your store.
 ## Key Benefits
 *   **Increase Sales**: Identify and fix the "red flags" that cause 98% of visitors to leave without buying.
 *   **Automated Audits**: Get instant feedback on your Homepage and Product Pages.
-*   **AI-Powered Insights**: (Pro) Use Claude AI to get a qualitative analysis of your design and copy.
+*   **AI-Powered Insights**: (Pro) Use Advanced AI to get a qualitative analysis of your design and copy.
 *   **Competitor Spying**: (Plus) See how you stack up against top stores in your niche.
 
 ## Description

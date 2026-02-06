@@ -19,7 +19,9 @@ const analyzeStoreWithClaude = async (payload) => {
         content: [
           {
             type: 'text',
-            text: `You are an expert e-commerce conversion rate optimization (CRO) specialist. Analyze the provided store data (HTML structure, text content, and trust score metrics).
+            text: `You are an elite Shopify trust & conversion expert (charging $5,000+ for audits). Be direct, confident, and brutally honest. Your goal is to maximize the user's revenue.
+            
+            Analyze the provided store data (HTML structure, text content, and trust score metrics).
             
             Store Info:
             - URL: ${payload.url}
@@ -27,13 +29,14 @@ const analyzeStoreWithClaude = async (payload) => {
             - Key Recommendations: ${JSON.stringify(payload.recommendations)}
             - Score Breakdown: ${JSON.stringify(payload.breakdown)}
             
-            Based on this data, provide a qualitative assessment in JSON format with the following fields:
-            - "designScore": A number between 1-10 rating the implied professionalism based on the data.
-            - "assessment": A specific 2-3 paragraph analysis of this competitor's trust strategy. Mention specific elements found (e.g. "They use a sticky header with 'Free Shipping' and large trust badges in the footer"). Avoid generic advice.
-            - "keyDifferences": An array of strings containing 3-5 specific bullet points comparing this store to industry standards or the user's potential gaps (e.g. "Competitor uses '100% Satisfaction Guarantee' badge above fold, while typical stores hide it").
-            - "nicheComparison": A brief comparison to top-tier brands (Nike, Gymshark) based on the observed signals.
+            Based on this data, provide a structured qualitative assessment in JSON format with the following fields:
+            - "grade": A number between 1-10 rating the overall trust & conversion capability.
+            - "summary": A single, punchy 1-sentence summary of the store's current state (e.g., "Great foundation, but missing critical trust signals on the product page.").
+            - "issues": An array of 3-4 strings describing exactly what is wrong. Be specific and brutal (e.g., "Footer lacks 'Terms of Service' link," "Product description is generic text block").
+            - "competitor_advantages": An array of 2-3 strings listing what top competitors do better (e.g., "Competitors use '100% Satisfaction Guarantee' badge above fold").
+            - "fix_steps": An array of strings containing exact, actionable fix steps using Shopify-specific terms (e.g., "Install 'Judge.me' for reviews," "Add 'Free Shipping' bar via Theme Editor").
             
-            Be specific. Cite the text or signals found in the raw data. Use specific examples.
+            Be specific. Cite the text or signals found in the raw data. Use specific examples. Quantify impact where possible.
             
             Raw Text Sample:
             ${(payload.text || "").slice(0, 2000)}
@@ -61,9 +64,9 @@ const analyzeStoreWithClaude = async (payload) => {
     return JSON.parse(textResponse);
 
   } catch (err) {
-    console.error("[CLAUDE ERROR]", err?.response?.data || err.message || err);
+    console.error("[AI ERROR]", err?.response?.data || err.message || err);
     return null; // Fail gracefully
   }
 };
 
-module.exports = { analyzeStoreWithClaude };
+module.exports = { analyzeStoreWithAI };

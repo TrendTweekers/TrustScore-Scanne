@@ -494,7 +494,7 @@ function Dashboard() {
                                              </InlineGrid>
                                              <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
                                                  <Spinner size="small" />
-                                                 <Text fontWeight="bold">Generating AI Insights (Claude)</Text>
+                                                 <Text fontWeight="bold">Generating AI Insights</Text>
                                              </InlineGrid>
                                          </BlockStack>
                                      </Box>
