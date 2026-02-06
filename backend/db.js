@@ -47,7 +47,11 @@ db.serialize(() => {
         { name: 'ai_usage_count', query: "ALTER TABLE shops ADD COLUMN ai_usage_count INTEGER DEFAULT 0" },
         { name: 'ai_usage_reset_date', query: "ALTER TABLE shops ADD COLUMN ai_usage_reset_date DATETIME" },
         { name: 'scope', query: "ALTER TABLE shops ADD COLUMN scope TEXT" },
-        { name: 'created_at', query: "ALTER TABLE shops ADD COLUMN created_at DATETIME" }
+        { name: 'created_at', query: "ALTER TABLE shops ADD COLUMN created_at DATETIME" },
+        { name: 'access_token', query: "ALTER TABLE shops ADD COLUMN access_token TEXT" },
+        { name: 'accessToken', query: "ALTER TABLE shops ADD COLUMN accessToken TEXT" },
+        { name: 'plan', query: "ALTER TABLE shops ADD COLUMN plan TEXT DEFAULT 'FREE'" },
+        { name: 'scan_count', query: "ALTER TABLE shops ADD COLUMN scan_count INTEGER DEFAULT 0" }
       ];
 
       migrations.forEach(migration => {
