@@ -473,50 +473,16 @@ function Dashboard() {
                     <BlockStack gap="500">
                         <ScoreChart />
 
-                        {/* Loading State for Scan */}
-                        {loading && !scanResult && (
-                            <Card>
-                                 <BlockStack gap="500" align="center">
-                                     <BlockStack gap="200" align="center">
-                                        <Spinner size="large" />
-                                        <Text variant="headingLg">Running Trust Audit...</Text>
-                                     </BlockStack>
-                                     
-                                     <Box width="100%" maxWidth="400px">
-                                         <BlockStack gap="400">
-                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                                 <Icon source={CheckCircleIcon} tone="success" />
-                                                 <Text>Capturing screenshots (Desktop & Mobile)</Text>
-                                             </InlineGrid>
-                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                                 <Icon source={CheckCircleIcon} tone="success" />
-                                                 <Text>Analyzing 25+ trust signals</Text>
-                                             </InlineGrid>
-                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                                 <Icon source={CheckCircleIcon} tone="success" />
-                                                 <Text>Calculating Trust Score</Text>
-                                             </InlineGrid>
-                                             <InlineGrid columns="auto 1fr" gap="300" alignItems="center">
-                                                 <Spinner size="small" />
-                                                 <Text fontWeight="bold">Generating AI Insights</Text>
-                                             </InlineGrid>
-                                         </BlockStack>
-                                     </Box>
-                                 </BlockStack>
-                            </Card>
-                        )}
-
-                        {/* Scan Result */}
-                        {scanResult && !loading && (
-                            <div style={{ animation: 'fadeIn 0.8s ease-out' }}>
-                                <TrustScore 
-                                    result={scanResult} 
-                                    plan={plan}
-                                    aiUsageCount={aiUsage}
-                                    onUpgrade={() => setShowUpgradeModal(true)}
-                                />
-                            </div>
-                        )}
+                        {/* TrustScore Component handles Empty, Loading, and Result states */}
+                        <TrustScore 
+                            result={scanResult} 
+                            plan={plan}
+                            aiUsageCount={aiUsage}
+                            onUpgrade={() => setShowUpgradeModal(true)}
+                            loading={loading}
+                            onScan={handleScan}
+                            revenueBracket={revenueBracket}
+                        />
                     </BlockStack>
                 </Layout.Section>
 
