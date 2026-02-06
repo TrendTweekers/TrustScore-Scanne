@@ -3,6 +3,7 @@ import { Page, Layout, Card, Button, BlockStack, InlineGrid, Text, Banner, Badge
 import { CheckCircleIcon } from '@shopify/polaris-icons';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
+import { track } from '../utils/analytics';
 import TrustScore from './TrustScore';
 import ScoreInfo from './ScoreInfo';
 import { OnboardingModal } from './OnboardingModal';

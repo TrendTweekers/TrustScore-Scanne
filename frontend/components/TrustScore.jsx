@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Text, ProgressBar, BlockStack, List, Banner, InlineGrid, Box, Tooltip, Icon, Tabs, Button } from '@shopify/polaris';
 import { InfoIcon } from '@shopify/polaris-icons';
+import { track } from '../utils/analytics';
 
 function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
   if (!plan) {
@@ -176,7 +177,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade }) {
                                   <Box>
                                       <Button variant="primary" onClick={(e) => {
                                           e.stopPropagation();
-                                          trackEvent('UPGRADE_CLICKED', { source: 'ai_gating_button' });
+                                          track('upgrade_clicked', { from_plan: plan, source: 'ai_gating_button' });
                                           onUpgrade();
                                       }}>
                                           Upgrade to Pro ($19/mo)
