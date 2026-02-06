@@ -4,6 +4,10 @@ const path = require('path');
 const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, 'trustscore.db');
 const db = new sqlite3.Database(dbPath);
 
+const normalizeShop = (shop) => {
+  return String(shop || '').trim().toLowerCase();
+};
+
 // Create tables if they don't exist
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS shops (
@@ -245,5 +249,6 @@ module.exports = {
   resetAIUsage,
   adminUpgradeShop,
   setShopPlan,
+  normalizeShop,
   db
 };

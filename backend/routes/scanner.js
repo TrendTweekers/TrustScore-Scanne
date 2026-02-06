@@ -1,7 +1,7 @@
 const express = require('express');
 const { takeScreenshots } = require('../services/puppeteer.js');
 const { calculateTrustScore } = require('../services/scoring.js');
-const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount, updateShopRevenue, incrementAIUsage, resetAIUsage } = require('../db.js');
+const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount, updateShopRevenue, incrementAIUsage, resetAIUsage, normalizeShop } = require('../db.js');
 const { analyzeStoreWithClaude } = require('../services/claude.js');
 const { sendScoreDropAlert } = require('../services/email.js');
 const { checkBillingMiddleware } = require('../middleware/billing.js');
@@ -15,6 +15,34 @@ const ensureProtocol = (url) => {
   }
   return url;
 };
+
+// GET /api/debug/plan
+router.get('/debug/plan', async (req, res) => {
+    try {
+        const session = res.locals.shopify?.session;
+        const rawShop = session?.shop || req.query.shop;
+        
+        if (!rawShop) {
+            return res.status(400).json({ error: 'Missing shop in session or query' });
+        }
+
+        const normalizedShop = normalizeShop(rawShop);
+        const shopData = await getShop(normalizedShop);
+
+        res.json({
+            shop: rawShop,
+            normalizedShop,
+            planFromDb: shopData?.plan || 'NOT_FOUND',
+            scan_count: shopData?.scan_count,
+            ai_usage_count: shopData?.ai_usage_count,
+            created_at: shopData?.created_at,
+            isActive: shopData?.isActive
+        });
+    } catch (error) {
+        console.error('Debug plan error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // POST /api/onboarding
 router.post('/onboarding', async (req, res) => {
@@ -141,9 +169,13 @@ router.get('/competitors', async (req, res) => {
 router.get('/dashboard', async (req, res) => {
   // 1️⃣ Read shop from session (preferred) or query
   const session = res.locals.shopify?.session;
-  const shop = session?.shop || req.query.shop;
+  const rawShop = session?.shop || req.query.shop;
 
-  console.log("DASHBOARD SHOP:", shop);
+  // Normalize shop immediately
+  const shop = normalizeShop(rawShop);
+
+  console.log("DASHBOARD SHOP (raw):", rawShop);
+  console.log("DASHBOARD SHOP (normalized):", shop);
   console.log("HIT /api/dashboard | shop:", shop);
   
   // Cache busting headers

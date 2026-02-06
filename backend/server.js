@@ -4,7 +4,25 @@ const { shopifyApp } = require('@shopify/shopify-app-express');
 const { RedisSessionStorage } = require('@shopify/shopify-app-session-storage-redis');
 const { SQLiteSessionStorage } = require('@shopify/shopify-app-session-storage-sqlite');
 const { LATEST_API_VERSION, BillingInterval, DeliveryMethod, Session } = require('@shopify/shopify-api');
-const { createOrUpdateShop, updateShopPlan, adminUpgradeShop, setShopPlan, getShop, db } = require('./db.js');
+const {
+  createOrUpdateShop,
+  getShop,
+  saveScan,
+  saveCompetitorScan,
+  getScanHistory,
+  getScansForChart,
+  getScanCount,
+  getCompetitorScans,
+  getCompetitorScanCount,
+  updateShopPlan,
+  updateShopRevenue,
+  incrementAIUsage,
+  resetAIUsage,
+  adminUpgradeShop,
+  setShopPlan,
+  normalizeShop,
+  db
+} = require('./db.js');
 const scannerRoutes = require('./routes/scanner.js');
 const serveStatic = require('serve-static');
 const path = require('path');
