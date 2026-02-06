@@ -204,75 +204,46 @@ app.get(
     next();
   },
   shopify.auth.callback(),
-  async (req, res, next) => {
-    // Post-authentication hook to save shop to DB
-    const session = res.locals.shopify.session;
-    if (session) {
-        console.log("Session successfully created!");
-        console.log("Shop:", session.shop);
-        console.log("Access token length:", session.accessToken?.length || "missing");
-        console.log("Session ID:", session.id);
-        console.log("Expires:", session.expires);
-        console.log("Attempted to store session in Redis for shop:", session.shop);
+  async (req, res) => {
+    try {
+      const session = res.locals.shopify.session;
+      
+      // If session exists, OAuth worked despite cookie error
+      if (session) {
+        console.log("OAuth completed successfully:", session.shop);
         
-        // Explicitly save the session since auto-save seems to be failing
-        try {
-            console.log("[Manual Fix] Explicitly calling storeSession(session)...");
-            await sessionStorage.storeSession(session);
-            console.log("[Manual Fix] storeSession completed.");
-        } catch (err) {
-            console.error("[Manual Fix] storeSession FAILED:", err);
+        // Create/update shop record
+        const existing = await getShop(session.shop);
+        
+        if (!existing) {
+          await new Promise((resolve, reject) => {
+            db.run(
+              `INSERT INTO shops (shop, accessToken, scope, plan, created_at, isActive) 
+               VALUES (?, ?, ?, 'FREE', datetime('now'), 1)`,
+              [session.shop, session.accessToken, session.scope],
+              (err) => err ? reject(err) : resolve()
+            );
+          });
+        } else {
+           await new Promise((resolve, reject) => {
+            db.run(
+              `UPDATE shops SET accessToken = ?, scope = ?, isActive = 1 WHERE shop = ?`,
+              [session.accessToken, session.scope, session.shop],
+              (err) => err ? reject(err) : resolve()
+            );
+           });
         }
-
-    } else {
-        console.log("Session creation FAILED — no session object");
+        
+        // Redirect to app
+        return res.redirect(`/?shop=${session.shop}`);
+      }
+    } catch (error) {
+      console.error("OAuth callback error:", error);
     }
-
-    // console.log("Session created and saved | shop:", session.shop, "id:", session.id, "accessToken:", !!session.accessToken);
     
-    // Ensure shop record exists in database
-    const existing = await getShop(session.shop);
-
-    if (!existing) {
-      console.log("Creating new shop record:", session.shop);
-      await new Promise((resolve, reject) => {
-        db.run(
-          `INSERT INTO shops (shop, accessToken, scope, plan, created_at, isActive) VALUES (?, ?, ?, 'FREE', datetime('now'), 1)`,
-          [session.shop, session.accessToken, session.scope],
-          (err) => {
-            if (err) {
-                console.error("Failed to create shop record:", err);
-                reject(err);
-            } else {
-                console.log("Shop record created successfully");
-                resolve();
-            }
-          }
-        );
-      });
-    } else {
-      console.log("Shop record already exists:", session.shop);
-      // Update access token and scope
-      await new Promise((resolve, reject) => {
-          db.run(
-            `UPDATE shops SET accessToken = ?, scope = ?, isActive = 1 WHERE shop = ?`,
-            [session.accessToken, session.scope, session.shop],
-            (err) => {
-                if (err) {
-                    console.error("Failed to update shop record:", err);
-                    reject(err);
-                } else {
-                    console.log("Shop record updated successfully");
-                    resolve();
-                }
-            }
-          );
-      });
-    }
-
-    next();
-  },
-  shopify.redirectToShopifyOrAppRoot()
+    // If no session, retry OAuth
+    return res.redirect(`/api/auth?shop=${req.query.shop}`);
+  }
 );
 
 // 3. Webhooks (Must be before body parsers)
