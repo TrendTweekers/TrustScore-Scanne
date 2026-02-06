@@ -228,7 +228,21 @@ app.get(
     }
 
     // console.log("Session created and saved | shop:", session.shop, "id:", session.id, "accessToken:", !!session.accessToken);
-    await createOrUpdateShop(session.shop, session.accessToken);
+    
+    // Ensure shop record exists in database
+    const { getShop, createOrUpdateShop } = require('./db');
+    const existing = await getShop(session.shop);
+
+    if (!existing) {
+      console.log("Creating new shop record:", session.shop);
+      // createOrUpdateShop already handles insertion/upsert
+      await createOrUpdateShop(session.shop, session.accessToken);
+    } else {
+      console.log("Shop record already exists:", session.shop);
+      // Update access token just in case
+      await createOrUpdateShop(session.shop, session.accessToken);
+    }
+
     next();
   },
   shopify.redirectToShopifyOrAppRoot()
