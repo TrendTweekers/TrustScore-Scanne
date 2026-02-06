@@ -316,7 +316,7 @@ const handleBillingRequest = async (req, res) => {
       plan: BILLING_PLANS[plan].label,
       isTest, 
       ...BILLING_PLANS[plan],
-      returnUrl: `https://${shopify.config.api.hostName}/?shop=${session.shop}&billing=success`,
+      returnUrl: `${process.env.HOST}/?shop=${session.shop}&billing=success`,
     };
     
     console.log("Calling shopify.api.billing.request with params:", JSON.stringify({
