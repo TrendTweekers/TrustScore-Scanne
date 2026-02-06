@@ -139,20 +139,44 @@ router.get('/competitors', async (req, res) => {
 
 // GET /api/dashboard
 router.get('/dashboard', async (req, res) => {
-  console.log("HIT /api/dashboard | shop:", req.query.shop || req.headers['x-shopify-shop-domain']);
+  // 1️⃣ Read shop from session (preferred) or query
+  const session = res.locals.shopify?.session;
+  const shop = session?.shop || req.query.shop;
+
+  console.log("HIT /api/dashboard | shop:", shop);
   
   // Cache busting headers
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
 
+  // 2️⃣ Hard fail if missing
+  if (!shop) {
+    console.error("Dashboard error: shop missing from session + query");
+    return res.status(400).json({ error: "Missing shop" });
+  }
+
   try {
-    const session = res.locals.shopify.session;
-    const history = await getScanHistory(session.shop);
-    const shopData = await getShop(session.shop);
+    // 3️⃣ Ensure the shop row exists (important because Railway + SQLite may reset)
+    const { db, getShop, getScanHistory } = require('../db.js'); // Ensure db is imported
+    
+    await db.run(`
+      INSERT OR IGNORE INTO shops (
+        shop,
+        access_token,
+        plan,
+        ai_usage_count,
+        created_at,
+        isActive
+      ) VALUES (?, ?, 'FREE', 0, datetime('now'), 1)
+    `, [shop, session?.accessToken || null]);
+
+    // 4️⃣ Fetch shop data
+    const history = await getScanHistory(shop);
+    const shopData = await getShop(shop);
 
     console.log("=== DASHBOARD DATA ===");
-    console.log("Shop:", session.shop);
+    console.log("Shop:", shop);
     console.log("Plan from DB:", shopData?.plan);
     console.log("Full shop data:", shopData);
 
@@ -168,14 +192,16 @@ router.get('/dashboard', async (req, res) => {
       }
     }
 
+    // 5️⃣ Return a stable response shape
     res.json({
-      shop: session.shop,
-      plan: shopData?.plan || 'FREE',
+      shop,
+      plan: shopData?.plan || "FREE",
       currentScore,
       trend,
       history: history.slice(0, 5), // Return last 5 scans for dashboard
       scanCount: history.length,
-      aiUsage: shopData?.ai_usage_count || 0
+      aiUsage: shopData?.ai_usage_count || 0,
+      shopData // Return full data just in case
     });
   } catch (error) {
     console.error('Dashboard error:', error);
