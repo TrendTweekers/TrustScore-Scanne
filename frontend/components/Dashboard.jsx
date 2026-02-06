@@ -427,7 +427,7 @@ function Dashboard() {
                     userPlan={plan} 
                     myLatestScore={currentScore} 
                     shopData={shopData} 
-                    myLatestScan={scanResult || dashboardData.latestScan}
+                    myLatestScan={history.length > 0 ? history[0] : null}
                 />
             </Layout.Section>
         ) : (
