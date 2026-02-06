@@ -105,6 +105,18 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
+  billing: {
+    [BILLING_PLANS.PRO.label]: {
+        amount: BILLING_PLANS.PRO.amount,
+        currencyCode: BILLING_PLANS.PRO.currencyCode,
+        interval: BILLING_PLANS.PRO.interval,
+    },
+    [BILLING_PLANS.PLUS.label]: {
+        amount: BILLING_PLANS.PLUS.amount,
+        currencyCode: BILLING_PLANS.PLUS.currencyCode,
+        interval: BILLING_PLANS.PLUS.interval,
+    }
+  },
   sessionStorage,
   isEmbeddedApp: true,
   session: {
