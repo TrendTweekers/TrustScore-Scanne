@@ -1,0 +1,242 @@
+@config "../tailwind.config.js";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+
+    --primary: 160 100% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 18% 95%;
+    --secondary-foreground: 220 30% 10%;
+
+    --muted: 210 14% 95%;
+    --muted-foreground: 215 12% 50%;
+
+    --accent: 168 80% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 14%;
+
+    --success: 152 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --score-critical: 0 72% 51%;
+    --score-warning: 38 92% 50%;
+    --score-good: 152 76% 36%;
+    --score-excellent: 160 100% 36%;
+
+    --border: 214 20% 92%;
+    --input: 214 20% 90%;
+    --ring: 160 100% 36%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 160 100% 42%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 168 80% 42%;
+    --accent-foreground: 222 47% 6%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 160 100% 42%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .score-ring {
+    filter: drop-shadow(0 4px 20px hsl(var(--score-critical) / 0.25));
+  }
+
+  .score-ring-good {
+    filter: drop-shadow(0 4px 20px hsl(var(--score-good) / 0.25));
+  }
+
+  .card-elevated {
+    box-shadow: 
+      0 1px 3px 0 hsl(220 20% 10% / 0.04),
+      0 1px 2px -1px hsl(220 20% 10% / 0.04);
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .card-elevated:hover {
+    box-shadow: 
+      0 4px 16px -4px hsl(220 20% 10% / 0.08),
+      0 2px 8px -2px hsl(220 20% 10% / 0.04);
+  }
+
+  .card-premium {
+    background: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(160 40% 98%) 100%);
+    box-shadow: 
+      0 1px 3px 0 hsl(220 20% 10% / 0.06),
+      0 1px 2px -1px hsl(220 20% 10% / 0.04),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.6);
+  }
+
+  .gradient-header {
+    background: linear-gradient(135deg, hsl(160 100% 36%) 0%, hsl(168 80% 32%) 50%, hsl(180 70% 28%) 100%);
+  }
+
+  .gradient-header-glow {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gradient-header-glow::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, hsl(0 0% 100% / 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .animate-score-in {
+    animation: scoreIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes scoreIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .priority-high {
+    border-left: 4px solid hsl(var(--destructive));
+    background: linear-gradient(90deg, hsl(var(--destructive) / 0.06) 0%, hsl(var(--destructive) / 0.02) 100%);
+  }
+
+  .priority-medium {
+    border-left: 4px solid hsl(var(--warning));
+    background: linear-gradient(90deg, hsl(var(--warning) / 0.06) 0%, hsl(var(--warning) / 0.02) 100%);
+  }
+
+  .priority-low {
+    border-left: 4px solid hsl(var(--success));
+    background: linear-gradient(90deg, hsl(var(--success) / 0.06) 0%, hsl(var(--success) / 0.02) 100%);
+  }
+
+  .glass-card {
+    backdrop-filter: blur(12px);
+    background: hsl(0 0% 100% / 0.7);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+  }
+
+  .pro-badge {
+    background: linear-gradient(135deg, hsl(160 100% 36%) 0%, hsl(168 80% 32%) 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .blur-gate {
+    filter: blur(4px);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.08) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}

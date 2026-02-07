@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Text, TextField, Button, BlockStack, InlineGrid, Banner, List, Box, ProgressBar, Divider, Spinner, Link, Badge, Icon } from '@shopify/polaris';
-import { SearchIcon, ChartVerticalIcon, ShieldCheckMarkIcon } from '@shopify/polaris-icons';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, ShieldAlert, ShieldCheck, ArrowRight, Lock, Trophy, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
+import { cn } from '../lib/utils';
 
 export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLatestScan }) {
   const fetch = useAuthenticatedFetch();
@@ -12,8 +13,8 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
   const [scans, setScans] = useState([]);
   const [selectedScan, setSelectedScan] = useState(null);
 
-  const limit = userPlan === 'PRO' ? 5 : 20;
-  
+  const limit = userPlan === 'PRO' ? 5 : 20; // 5/mo for Pro (example), 1 for Free usually handled by backend or upgrade modal
+
   const loadScans = useCallback(async () => {
     try {
       const res = await fetch('/api/competitors');
@@ -51,20 +52,12 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
         // Block list
         const blockedDomains = ['shopify.com', 'www.shopify.com', 'help.shopify.com', 'partners.shopify.com', 'admin.shopify.com', 'apps.shopify.com', 'community.shopify.com'];
         if (blockedDomains.includes(hostname)) {
-             const msg = "Please enter a real Shopify storefront domain (e.g. brand.com). Avoid shopify.com marketing or admin sites.";
-             setError(msg);
-             setLoading(false);
-             trackEvent('competitor_scan_failed', { reason: 'blocked_domain', url: cleanUrl });
-             return;
+             throw new Error("Please enter a real Shopify storefront domain (e.g. brand.com). Avoid shopify.com marketing or admin sites.");
         }
         
         // Self-check
         if (shopData && (shopData.domain === hostname || shopData.myshopify_domain === hostname)) {
-             const msg = "You are scanning your own store. Use the Dashboard to audit your store.";
-             setError(msg);
-             setLoading(false);
-             trackEvent('competitor_scan_failed', { reason: 'self_scan', url: cleanUrl });
-             return;
+             throw new Error("You are scanning your own store. Use the Dashboard to audit your store.");
         }
 
         trackEvent('competitor_scan_started', { url: cleanUrl });
@@ -92,405 +85,290 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
 
     } catch (err) {
         setError(err.message);
+        trackEvent('competitor_scan_failed', { reason: 'error', message: err.message });
     } finally {
         setLoading(false);
     }
   };
 
-  // Helper to get breakdown item
+  // Helper to get breakdown item for comparison
   const getMyBreakdownItem = (category) => {
       if (!myLatestScan || !myLatestScan.result || !myLatestScan.result.breakdown) return null;
-      return myLatestScan.result.breakdown.find(b => b.category === category);
+      // Handle both array and object formats for breakdown
+      const breakdown = myLatestScan.result.breakdown;
+      if (Array.isArray(breakdown)) {
+          return breakdown.find(b => b.category === category || b.name === category);
+      }
+      return breakdown[category];
   };
 
   if (userPlan === 'FREE') {
       return (
-          <BlockStack gap="800">
-            <Card>
-                <BlockStack gap="400">
-                    <Text variant="headingMd">Trust Gap Analysis</Text>
-                    <Text as="p" tone="subdued">
-                        Compare your trust score against any competitor to see exactly where you're losing customers.
-                    </Text>
-                    
-                    <InlineGrid columns={{ xs: 1, sm: ['twoThirds', 'oneThird'] }} gap="400" alignItems="end">
-                        <TextField 
-                            label="Competitor URL" 
-                            disabled 
-                            placeholder="https://competitor-store.com" 
-                            autoComplete="off"
-                        />
-                        <Button disabled>Run Competitor Audit</Button>
-                    </InlineGrid>
-                </BlockStack>
-            </Card>
-
-            <div style={{ position: 'relative' }}>
-                <div style={{ filter: 'blur(8px)', userSelect: 'none', opacity: 0.5, pointerEvents: 'none' }}>
-                    <Card>
-                        <BlockStack gap="500">
-                            <Text variant="headingLg">Comparison Result</Text>
-                            <Box background="bg-surface-critical" padding="500" borderRadius="200">
-                                <BlockStack gap="200" align="center">
-                                    <Text variant="headingLg" tone="critical">CRITICAL GAP: 24 POINTS</Text>
-                                    <Text>Your store: 53 | Competitor: 77</Text>
-                                </BlockStack>
-                            </Box>
-                            <InlineGrid columns={{ xs: 1, sm: 2 }} gap="800">
-                                 <BlockStack gap="400">
-                                    <Text variant="headingMd">Your Store</Text>
-                                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                        <Text variant="heading3xl">53/100</Text>
-                                    </Box>
-                                 </BlockStack>
-                                 <BlockStack gap="400">
-                                    <Text variant="headingMd">Competitor</Text>
-                                    <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                        <Text variant="heading3xl">77/100</Text>
-                                    </Box>
-                                 </BlockStack>
-                            </InlineGrid>
-                            <Text variant="headingMd">Trust Breakdown</Text>
-                            <BlockStack gap="300">
-                                <Box padding="300" background="bg-surface-secondary"><Text>Trust Badges: You 0/25 vs Them 25/25</Text></Box>
-                                <Box padding="300" background="bg-surface-secondary"><Text>Security: You 10/20 vs Them 20/20</Text></Box>
-                                <Box padding="300" background="bg-surface-secondary"><Text>Social Proof: You 5/15 vs Them 12/15</Text></Box>
-                            </BlockStack>
-                        </BlockStack>
-                    </Card>
+          <div className="space-y-6">
+            <div className="bg-card rounded-2xl border border-border card-elevated p-6">
+                <div className="mb-4">
+                    <h2 className="text-lg font-bold">Trust Gap Analysis</h2>
+                    <p className="text-sm text-muted-foreground">Compare your trust score against any competitor to see exactly where you're losing customers.</p>
                 </div>
                 
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10, textAlign: 'center', width: '90%', maxWidth: '500px' }}>
-                    <Card>
-                        <BlockStack gap="400" align="center">
-                            <InlineGrid gap="200" align="center">
-                                <Icon source={SearchIcon} tone="magic" />
-                                <Text variant="headingLg">Unlock Competitive Intelligence</Text>
-                            </InlineGrid>
-                            <Text alignment="center" as="p">
-                                See exactly why competitors are beating you. Get a full breakdown of their trust score, AI-detected winning strategies, and estimated revenue gaps.
-                            </Text>
-                            <Box paddingBlockStart="200">
-                                <Button size="large" variant="primary" onClick={() => window.open('/?billing=upgrade', '_top')}>
-                                    Upgrade to Pro to Unlock
-                                </Button>
-                            </Box>
-                            <Text variant="bodySm" tone="subdued">Starting at $19/mo. Cancel anytime.</Text>
-                        </BlockStack>
-                    </Card>
+                <div className="flex gap-3 items-end">
+                    <div className="flex-1 relative">
+                        <input 
+                            disabled
+                            placeholder="https://competitor-store.com" 
+                            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-muted/50 text-sm focus:outline-none cursor-not-allowed"
+                        />
+                    </div>
+                    <button disabled className="bg-primary/50 text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold cursor-not-allowed">
+                        Run Audit
+                    </button>
                 </div>
             </div>
-          </BlockStack>
+
+            <div className="relative">
+                <div className="blur-sm select-none opacity-50 pointer-events-none">
+                    <div className="bg-card rounded-2xl border border-border p-6 space-y-6">
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-center">
+                            <h3 className="text-xl font-bold text-destructive">CRITICAL GAP: 24 POINTS</h3>
+                            <p className="text-sm text-destructive/80">Your store: 53 | Competitor: 77</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="text-center">
+                                <p className="text-sm font-semibold mb-2">Your Store</p>
+                                <div className="text-4xl font-bold">53</div>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm font-semibold mb-2">Competitor</p>
+                                <div className="text-4xl font-bold text-success">77</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="absolute inset-0 flex items-center justify-center p-6">
+                    <div className="bg-card/95 backdrop-blur-md border border-border shadow-xl rounded-2xl p-6 max-w-md text-center">
+                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Trophy className="w-6 h-6 text-primary" />
+                        </div>
+                        <h3 className="text-lg font-bold mb-2">Unlock Competitive Intelligence</h3>
+                        <p className="text-sm text-muted-foreground mb-6">
+                            See exactly why competitors are beating you. Get a full breakdown of their trust score and AI-detected winning strategies.
+                        </p>
+                        <button 
+                            onClick={() => window.open('/?billing=upgrade', '_top')}
+                            className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                        >
+                            Upgrade to Pro to Unlock
+                        </button>
+                    </div>
+                </div>
+            </div>
+          </div>
       );
   }
 
   return (
-    <BlockStack gap="800">
-        <Card>
-            <BlockStack gap="400">
-                <Text variant="headingMd">Trust Gap Analysis</Text>
-                <Text as="p">
-                    Compare your trust score against any competitor. 
-                    <Text as="span" tone="subdued"> ({scans.length}/{limit} audits used)</Text>
-                </Text>
+    <div className="space-y-6">
+        {/* Input Card */}
+        <div className="bg-card rounded-2xl border border-border card-elevated p-6">
+            <div className="mb-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                        <Search className="w-5 h-5 text-primary" />
+                        Trust Gap Analysis
+                    </h2>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                        {scans.length}/{limit} audits used
+                    </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                    Compare your trust score against any competitor.
+                </p>
+            </div>
 
-                <InlineGrid columns={{ xs: 1, sm: ['twoThirds', 'oneThird'] }} gap="400" alignItems="end">
-                    <TextField 
-                        label="Competitor URL" 
-                        value={url} 
-                        onChange={setUrl} 
-                        placeholder="https://competitor-store.com" 
-                        autoComplete="off"
-                        disabled={loading || scans.length >= limit}
-                    />
-                    <Button 
-                        variant="primary" 
-                        onClick={handleScan} 
-                        loading={loading}
-                        disabled={!url || loading || scans.length >= limit}
-                    >
-                        Run Competitor Audit
-                    </Button>
-                </InlineGrid>
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex-1 w-full relative">
+                    <label className="text-xs font-semibold ml-1 mb-1.5 block">Competitor URL</label>
+                    <div className="relative">
+                        <input 
+                            value={url} 
+                            onChange={(e) => setUrl(e.target.value)} 
+                            placeholder="https://competitor-store.com" 
+                            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            disabled={loading || scans.length >= limit}
+                            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+                        />
+                    </div>
+                </div>
+                <button 
+                    onClick={handleScan} 
+                    disabled={!url || loading || scans.length >= limit}
+                    className={cn(
+                        "bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2 min-w-[140px] justify-center h-[42px]",
+                        (!url || loading || scans.length >= limit) && "opacity-50 cursor-not-allowed"
+                    )}
+                >
+                    {loading ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Analyzing...
+                        </>
+                    ) : (
+                        <>Run Audit <ArrowRight className="w-4 h-4" /></>
+                    )}
+                </button>
+            </div>
 
-                {error && (
-                    <Banner tone="critical">{error}</Banner>
-                )}
-            </BlockStack>
-        </Card>
+            {error && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg flex items-center gap-2"
+                >
+                    <AlertTriangle className="w-4 h-4" />
+                    {error}
+                </motion.div>
+            )}
+        </div>
 
-        {loading && (
-             <Card>
-                 <BlockStack gap="400" align="center">
-                     <Spinner size="large" />
-                     <Text>Running Competitor Audit...</Text>
-                 </BlockStack>
-             </Card>
-        )}
-
+        {/* Empty State */}
         {!selectedScan && !loading && scans.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
-                <BlockStack gap="400" align="center">
-                    <Box padding="400" background="bg-surface-secondary" borderRadius="full">
-                        <Icon source={SearchIcon} tone="subdued" />
-                    </Box>
-                    <Text variant="headingLg" tone="subdued">No Competitor Audits Yet</Text>
-                    <Text as="p" tone="subdued">
-                        Enter a competitor's URL above to see how their TrustScore compares to yours.
-                        <br />
-                        Find out exactly why they might be converting better.
-                    </Text>
-                </BlockStack>
+            <div className="text-center py-12 opacity-60">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-bold text-muted-foreground">No Competitor Audits Yet</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
+                    Enter a competitor's URL above to see how their TrustScore compares to yours.
+                    Find out exactly why they might be converting better.
+                </p>
             </div>
         )}
 
-        {selectedScan && !loading && (
-            <BlockStack gap="600">
-            <Card>
-                <BlockStack gap="500">
-                    <Text variant="headingLg" as="h3">Comparison Result</Text>
-                    
-                    {!selectedScan.score ? (
-                        <Banner tone="warning">Invalid audit data. Please try again.</Banner>
-                    ) : (
-                    <>
-                    {/* TRUST GAP CARD */}
+        {/* Results */}
+        <AnimatePresence>
+            {selectedScan && !loading && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                >
                     {(() => {
                         const gap = selectedScan.score - myLatestScore;
                         const isLosing = gap > 0;
                         const gapValue = Math.abs(gap);
                         
-                        if (gap > 25) {
-                            return (
-                                <div 
-                                    style={{ 
-                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                                        cursor: 'default'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = 'none';
-                                    }}
-                                >
-                                <Box background="bg-surface-critical" padding="500" borderRadius="200" borderWidth="1" borderColor="border-critical">
-                                    <BlockStack gap="400" align="center">
-                                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
-                                            <Icon source={ShieldCheckMarkIcon} tone="critical" />
-                                            <Text variant="headingXl" tone="critical">
-                                                CRITICAL GAP: {gapValue} POINTS
-                                            </Text>
-                                        </InlineGrid>
-                                        <Text variant="bodyLg" fontWeight="bold" tone="critical">
-                                            ⚠️ You are losing ~14% market share to this competitor due to lower Trust.
-                                        </Text>
-                                    </BlockStack>
-                                </Box>
+                        return (
+                            <div className="bg-card rounded-2xl border border-border card-elevated p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-lg font-bold">Comparison Result</h3>
+                                    <span className="text-xs text-muted-foreground font-mono">{new URL(selectedScan.url).hostname}</span>
                                 </div>
-                            );
-                        } else if (isLosing) {
-                            return (
-                                <div 
-                                    style={{ 
-                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                                        cursor: 'default'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = 'none';
-                                    }}
-                                >
-                                <Box background="bg-surface-warning" padding="500" borderRadius="200" borderWidth="1" borderColor="border-warning">
-                                    <BlockStack gap="200" align="center">
-                                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
-                                             <Icon source={ChartVerticalIcon} tone="caution" />
-                                             <Text variant="headingLg" tone="caution">
-                                                 Trust Gap: {gapValue} Points
-                                             </Text>
-                                        </InlineGrid>
-                                        <Text variant="bodyMd">
-                                            Your store: {myLatestScore} | Competitor: {selectedScan.score}
-                                        </Text>
-                                    </BlockStack>
-                                </Box>
-                                </div>
-                            );
-                        } else {
-                            return (
-                                <div 
-                                    style={{ 
-                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                                        cursor: 'default'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = 'none';
-                                    }}
-                                >
-                                <Box background="bg-surface-success" padding="500" borderRadius="200" borderWidth="1" borderColor="border-success">
-                                    <BlockStack gap="200" align="center">
-                                        <InlineGrid columns="auto auto" gap="300" alignItems="center">
-                                             <Icon source={ShieldCheckMarkIcon} tone="success" />
-                                             <Text variant="headingXl" tone="success">
-                                                 YOU ARE LEADING BY {gapValue} POINTS
-                                             </Text>
-                                        </InlineGrid>
-                                        <Text variant="bodyMd" fontWeight="bold">
-                                            Your store: {myLatestScore} | Competitor: {selectedScan.score}
-                                        </Text>
-                                        <Text tone="success" fontWeight="bold">
-                                            🔥 Your trust score is higher! Keep optimizing to maintain your lead.
-                                        </Text>
-                                    </BlockStack>
-                                </Box>
-                                </div>
-                            );
-                        }
-                    })()}
 
-                    <InlineGrid columns={{ xs: 1, sm: 2 }} gap="800">
-                        {/* My Store */}
-                        <BlockStack gap="400">
-                            <Text variant="headingMd">Your Store</Text>
-                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                <BlockStack gap="200" align="center">
-                                    <Text variant="heading3xl">{myLatestScore}/100</Text>
-                                    <ProgressBar progress={myLatestScore} size="small" tone={myLatestScore > 80 ? 'success' : 'warning'} />
-                                </BlockStack>
-                            </Box>
-                        </BlockStack>
-                        {/* Competitor */}
-                        <BlockStack gap="400">
-                            <Text variant="headingMd">Competitor</Text>
-                            <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                                <BlockStack gap="200" align="center">
-                                    <Text variant="heading3xl">{selectedScan.score}/100</Text>
-                                    <ProgressBar progress={selectedScan.score} size="small" tone={selectedScan.score > 80 ? 'success' : 'warning'} />
-                                </BlockStack>
-                            </Box>
-                        </BlockStack>
-                    </InlineGrid>
+                                {/* Score Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    {/* My Store */}
+                                    <div className="bg-muted/30 rounded-2xl p-5 text-center border border-border">
+                                        <p className="text-sm font-semibold text-muted-foreground mb-2">Your Store</p>
+                                        <div className="text-4xl font-black font-mono">{myLatestScore}</div>
+                                        <div className="mt-2 text-xs text-muted-foreground">Current Score</div>
+                                    </div>
 
-                    <Divider />
-                    
-                    {/* TRUST GAP BREAKDOWN */}
-                    <Text variant="headingLg">Trust Gap Breakdown</Text>
-                    <BlockStack gap="400">
-                        {selectedScan.result && selectedScan.result.breakdown && selectedScan.result.breakdown.map((item, index) => {
-                            const myItem = getMyBreakdownItem(item.category);
-                            const myPoints = myItem ? myItem.points : 0;
-                            const compPoints = item.points;
-                            const diff = compPoints - myPoints;
-                            
-                            return (
-                                <Box key={index} padding="400" background="bg-surface-secondary" borderRadius="200">
-                                    <BlockStack gap="200">
-                                        <InlineGrid columns="1fr auto" alignItems="center">
-                                            <Text variant="headingSm">{item.category}</Text>
-                                            {diff > 0 ? (
-                                                <Badge tone="critical">You lost {diff} pts</Badge>
-                                            ) : diff < 0 ? (
-                                                <Badge tone="success">You won {Math.abs(diff)} pts</Badge>
-                                            ) : (
-                                                <Badge tone="info">Tie</Badge>
-                                            )}
-                                        </InlineGrid>
+                                    {/* VS Badge */}
+                                    <div className="flex items-center justify-center">
+                                        <div className="bg-muted rounded-full px-4 py-1 text-xs font-bold text-muted-foreground">VS</div>
+                                    </div>
+
+                                    {/* Competitor */}
+                                    <div className="bg-muted/30 rounded-2xl p-5 text-center border border-border">
+                                        <p className="text-sm font-semibold text-muted-foreground mb-2">Competitor</p>
+                                        <div className={cn("text-4xl font-black font-mono", isLosing ? "text-success" : "text-destructive")}>
+                                            {selectedScan.score}
+                                        </div>
+                                        <div className="mt-2 text-xs text-muted-foreground">Their Score</div>
+                                    </div>
+                                </div>
+
+                                {/* Gap Alert */}
+                                <div className={cn(
+                                    "rounded-xl p-5 mb-8 border flex items-center gap-4",
+                                    isLosing ? "bg-destructive/10 border-destructive/20" : "bg-success/10 border-success/20"
+                                )}>
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                                        isLosing ? "bg-destructive/20" : "bg-success/20"
+                                    )}>
+                                        {isLosing ? <ShieldAlert className="w-5 h-5 text-destructive" /> : <ShieldCheck className="w-5 h-5 text-success" />}
+                                    </div>
+                                    <div>
+                                        <h4 className={cn("text-lg font-bold", isLosing ? "text-destructive" : "text-success")}>
+                                            {isLosing ? `CRITICAL GAP: ${gapValue} POINTS` : `YOU ARE WINNING BY ${gapValue} POINTS`}
+                                        </h4>
+                                        <p className="text-sm opacity-90">
+                                            {isLosing 
+                                                ? "⚠️ You are losing potential customers to this competitor due to lower trust signals." 
+                                                : "🎉 Great job! Your store has stronger trust signals than this competitor."}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Detailed Breakdown Comparison */}
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-sm uppercase tracking-wide text-muted-foreground mb-4">Category Breakdown</h4>
+                                    
+                                    {selectedScan.breakdown && Array.isArray(selectedScan.breakdown) && selectedScan.breakdown.map((item, i) => {
+                                        // Try to find matching category in myLatestScan
+                                        const myItem = getMyBreakdownItem(item.name || item.category);
+                                        const myScore = myItem ? (myItem.score || 0) : 0;
+                                        const theirScore = item.score || 0;
+                                        const max = item.maxScore || 10;
                                         
-                                        {/* Comparison Bars */}
-                                        <BlockStack gap="200">
-                                            <InlineGrid columns="80px 1fr 60px" alignItems="center" gap="200">
-                                                <Text variant="bodySm" tone="subdued">You</Text>
-                                                <ProgressBar progress={(myPoints / item.maxPoints) * 100} tone={myPoints === item.maxPoints ? 'success' : 'critical'} size="small" />
-                                                <Text variant="bodySm" fontWeight="bold">{myPoints}/{item.maxPoints}</Text>
-                                            </InlineGrid>
-                                            <InlineGrid columns="80px 1fr 60px" alignItems="center" gap="200">
-                                                <Text variant="bodySm" tone="subdued">Them</Text>
-                                                <ProgressBar progress={(compPoints / item.maxPoints) * 100} tone={compPoints === item.maxPoints ? 'success' : 'critical'} size="small" />
-                                                <Text variant="bodySm" fontWeight="bold">{compPoints}/{item.maxPoints}</Text>
-                                            </InlineGrid>
-                                        </BlockStack>
-                                    </BlockStack>
-                                </Box>
-                            );
-                        })}
-                    </BlockStack>
+                                        // Only show if max > 0
+                                        if (max <= 0) return null;
 
-                    </>
-                    )}
-                </BlockStack>
-            </Card>
+                                        return (
+                                            <div key={i} className="bg-muted/20 rounded-xl p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-semibold text-sm">{item.name || item.category}</span>
+                                                    <span className="text-xs text-muted-foreground">Max: {max}</span>
+                                                </div>
+                                                
+                                                <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                                                    {/* My Bar (Right aligned) */}
+                                                    <div className="flex flex-col items-end">
+                                                        <div className="text-xs font-mono mb-1">You: {myScore}</div>
+                                                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden flex justify-end">
+                                                            <div 
+                                                                className="h-full bg-primary" 
+                                                                style={{ width: `${(myScore / max) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
 
-            {/* AI ASSESSMENT CARD */}
-            {selectedScan.aiAnalysis && (
-                <Card>
-                    <BlockStack gap="400">
-                        <InlineGrid columns="auto 1fr" gap="400" alignItems="center">
-                             <Box background="bg-surface-magic" padding="200" borderRadius="100">
-                                <Icon source={SearchIcon} tone="magic" />
-                             </Box>
-                             <BlockStack gap="100">
-                                <Text variant="headingLg">AI Competitor Intelligence</Text>
-                                <Text tone="subdued">Powered by Advanced AI</Text>
-                             </BlockStack>
-                        </InlineGrid>
-                        
-                        <Box background="bg-surface-secondary" padding="400" borderRadius="200">
-                            <BlockStack gap="400">
-                                <Text variant="headingSm">Why They Score Higher:</Text>
-                                <Text variant="bodyLg" as="p">
-                                    {selectedScan.aiAnalysis.assessment || "No detailed assessment available."}
-                                </Text>
-                                
-                                {(selectedScan.aiAnalysis.keyDifferences || selectedScan.aiAnalysis.priorityFixes) && (
-                                    <>
-                                    <Divider />
-                                    <Text variant="headingSm">Winning Strategies (Copy These):</Text>
-                                    <List type="bullet">
-                                        {(selectedScan.aiAnalysis.keyDifferences || selectedScan.aiAnalysis.priorityFixes).map((fix, i) => (
-                                            <List.Item key={i}>
-                                                <Text as="span" fontWeight="bold">{fix}</Text>
-                                            </List.Item>
-                                        ))}
-                                    </List>
-                                    </>
-                                )}
-                            </BlockStack>
-                        </Box>
-                    </BlockStack>
-                </Card>
+                                                    <div className="text-[10px] text-muted-foreground font-bold">VS</div>
+
+                                                    {/* Their Bar (Left aligned) */}
+                                                    <div className="flex flex-col items-start">
+                                                        <div className="text-xs font-mono mb-1">Them: {theirScore}</div>
+                                                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={cn("h-full", theirScore > myScore ? "bg-destructive" : "bg-success")} 
+                                                                style={{ width: `${(theirScore / max) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                            </div>
+                        );
+                    })()}
+                </motion.div>
             )}
-            </BlockStack>
-        )}
-
-        {scans.length > 0 && (
-            <Card>
-                <BlockStack gap="400">
-                    <Text variant="headingMd">Audit History</Text>
-                    <List>
-                        {scans.map((scan, i) => (
-                            <List.Item key={i}>
-                                <InlineGrid columns={3} gap="400" alignItems="center">
-                                    <Text fontWeight="bold">{scan.competitor_url || scan.url}</Text>
-                                    <Text tone={scan.score > 80 ? 'success' : 'warning'}>Score: {scan.score}/100</Text>
-                                    <Button variant="plain" onClick={() => setSelectedScan(scan)}>View Comparison</Button>
-                                </InlineGrid>
-                            </List.Item>
-                        ))}
-                    </List>
-                </BlockStack>
-            </Card>
-        )}
-    </BlockStack>
+        </AnimatePresence>
+    </div>
   );
 }
