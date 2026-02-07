@@ -5,7 +5,7 @@ import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import { trackEvent } from '../utils/analytics';
 import { cn } from '../lib/utils';
 
-export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLatestScan }) {
+export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLatestScan, onUpgrade }) {
   const fetch = useAuthenticatedFetch();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,63 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
   const [scans, setScans] = useState([]);
   const [selectedScan, setSelectedScan] = useState(null);
 
-  const limit = userPlan === 'PRO' ? 5 : 20; // 5/mo for Pro (example), 1 for Free usually handled by backend or upgrade modal
+  const isFree = userPlan === 'FREE';
+
+  // Gating for Free Users
+  if (isFree) {
+    return (
+      <motion.div 
+        className="bg-card rounded-2xl border border-border card-elevated overflow-hidden mb-6 relative group cursor-pointer"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        onClick={() => {
+            trackEvent('upgrade_clicked', { from_plan: userPlan, source: 'competitor_gating_card' });
+            if (onUpgrade) onUpgrade();
+        }}
+      >
+        {/* Blurred Background Content */}
+        <div className="p-8 filter blur-sm opacity-50 select-none pointer-events-none">
+            <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-bold">Competitive Intelligence</h3>
+                <div className="bg-primary/10 px-3 py-1 rounded-full text-primary font-bold text-sm">Pro Feature</div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-8 mb-8">
+                <div className="bg-muted p-6 rounded-2xl">
+                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground">Your Score</h4>
+                    <div className="text-4xl font-bold text-primary">78/100</div>
+                </div>
+                <div className="bg-muted p-6 rounded-2xl border-2 border-destructive/20">
+                    <h4 className="text-sm font-semibold mb-3 text-muted-foreground">Competitor</h4>
+                    <div className="text-4xl font-bold text-destructive">92/100</div>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <div className="h-6 bg-muted rounded w-3/4"></div>
+                <div className="h-6 bg-muted rounded w-full"></div>
+                <div className="h-6 bg-muted rounded w-5/6"></div>
+            </div>
+        </div>
+
+        {/* Lock Overlay */}
+        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center transition-colors group-hover:bg-background/50">
+            <div className="w-16 h-16 rounded-full bg-magic/10 flex items-center justify-center mb-6 shadow-xl ring-4 ring-background">
+                <Lock className="w-8 h-8 text-magic" />
+            </div>
+            <h3 className="text-2xl font-bold mb-3">Spy on Your Competitors</h3>
+            <p className="text-muted-foreground max-w-md mb-8 text-lg">
+                See exactly where you're losing customers to your competition. Compare trust scores, uncover their winning strategies, and close the gap.
+            </p>
+            <button className="bg-magic text-white px-8 py-3 rounded-xl text-base font-bold shadow-lg shadow-magic/20 hover:shadow-xl hover:shadow-magic/30 transition-all transform group-hover:scale-105">
+                Upgrade to Unlock Intelligence
+            </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const limit = userPlan === 'PRO' ? 5 : 20; 
 
   const loadScans = useCallback(async () => {
     try {
@@ -98,277 +154,191 @@ export function CompetitorComparison({ userPlan, myLatestScore, shopData, myLate
       const breakdown = myLatestScan.result.breakdown;
       if (Array.isArray(breakdown)) {
           return breakdown.find(b => b.category === category || b.name === category);
+      } else {
+          // Object format
+          return breakdown[category];
       }
-      return breakdown[category];
   };
-
-  if (userPlan === 'FREE') {
-      return (
-          <div className="space-y-6">
-            <div className="bg-card rounded-2xl border border-border card-elevated p-6">
-                <div className="mb-4">
-                    <h2 className="text-lg font-bold">Trust Gap Analysis</h2>
-                    <p className="text-sm text-muted-foreground">Compare your trust score against any competitor to see exactly where you're losing customers.</p>
-                </div>
-                
-                <div className="flex gap-3 items-end">
-                    <div className="flex-1 relative">
-                        <input 
-                            disabled
-                            placeholder="https://competitor-store.com" 
-                            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-muted/50 text-sm focus:outline-none cursor-not-allowed"
-                        />
-                    </div>
-                    <button disabled className="bg-primary/50 text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold cursor-not-allowed">
-                        Run Audit
-                    </button>
-                </div>
-            </div>
-
-            <div className="relative">
-                <div className="blur-sm select-none opacity-50 pointer-events-none">
-                    <div className="bg-card rounded-2xl border border-border p-6 space-y-6">
-                        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-center">
-                            <h3 className="text-xl font-bold text-destructive">CRITICAL GAP: 24 POINTS</h3>
-                            <p className="text-sm text-destructive/80">Your store: 53 | Competitor: 77</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="text-center">
-                                <p className="text-sm font-semibold mb-2">Your Store</p>
-                                <div className="text-4xl font-bold">53</div>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-sm font-semibold mb-2">Competitor</p>
-                                <div className="text-4xl font-bold text-success">77</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="absolute inset-0 flex items-center justify-center p-6">
-                    <div className="bg-card/95 backdrop-blur-md border border-border shadow-xl rounded-2xl p-6 max-w-md text-center">
-                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Trophy className="w-6 h-6 text-primary" />
-                        </div>
-                        <h3 className="text-lg font-bold mb-2">Unlock Competitive Intelligence</h3>
-                        <p className="text-sm text-muted-foreground mb-6">
-                            See exactly why competitors are beating you. Get a full breakdown of their trust score and AI-detected winning strategies.
-                        </p>
-                        <button 
-                            onClick={() => window.open('/?billing=upgrade', '_top')}
-                            className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
-                        >
-                            Upgrade to Pro to Unlock
-                        </button>
-                    </div>
-                </div>
-            </div>
-          </div>
-      );
-  }
 
   return (
     <div className="space-y-6">
-        {/* Input Card */}
+        {/* Search Bar */}
         <div className="bg-card rounded-2xl border border-border card-elevated p-6">
-            <div className="mb-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold flex items-center gap-2">
-                        <Search className="w-5 h-5 text-primary" />
-                        Trust Gap Analysis
-                    </h2>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                        {scans.length}/{limit} audits used
-                    </span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Compare your trust score against any competitor.
-                </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 items-end">
-                <div className="flex-1 w-full relative">
-                    <label className="text-xs font-semibold ml-1 mb-1.5 block">Competitor URL</label>
-                    <div className="relative">
-                        <input 
-                            value={url} 
-                            onChange={(e) => setUrl(e.target.value)} 
-                            placeholder="https://competitor-store.com" 
-                            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                            disabled={loading || scans.length >= limit}
-                            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-                        />
-                    </div>
+            <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input 
+                        type="text" 
+                        placeholder="Enter competitor URL (e.g. competitor.com)"
+                        className="w-full pl-12 pr-4 py-3 bg-muted/30 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+                    />
                 </div>
                 <button 
-                    onClick={handleScan} 
-                    disabled={!url || loading || scans.length >= limit}
-                    className={cn(
-                        "bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2 min-w-[140px] justify-center h-[42px]",
-                        (!url || loading || scans.length >= limit) && "opacity-50 cursor-not-allowed"
-                    )}
+                    onClick={handleScan}
+                    disabled={loading || !url}
+                    className="w-full md:w-auto px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Analyzing...
-                        </>
-                    ) : (
-                        <>Run Audit <ArrowRight className="w-4 h-4" /></>
-                    )}
+                    {loading ? "Analyzing..." : "Compare"}
                 </button>
             </div>
-
             {error && (
-                <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg flex items-center gap-2"
-                >
-                    <AlertTriangle className="w-4 h-4" />
+                <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                    <ShieldAlert className="w-4 h-4" />
                     {error}
-                </motion.div>
+                </div>
             )}
         </div>
 
-        {/* Empty State */}
-        {!selectedScan && !loading && scans.length === 0 && (
-            <div className="text-center py-12 opacity-60">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Search className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-bold text-muted-foreground">No Competitor Audits Yet</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-                    Enter a competitor's URL above to see how their TrustScore compares to yours.
-                    Find out exactly why they might be converting better.
-                </p>
-            </div>
-        )}
-
-        {/* Results */}
-        <AnimatePresence>
-            {selectedScan && !loading && (
+        {/* Results Area */}
+        <AnimatePresence mode="wait">
+            {selectedScan && (
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
+                    exit={{ opacity: 0, y: -20 }}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-6"
                 >
-                    {(() => {
-                        const gap = selectedScan.score - myLatestScore;
-                        const isLosing = gap > 0;
-                        const gapValue = Math.abs(gap);
-                        
-                        return (
-                            <div className="bg-card rounded-2xl border border-border card-elevated p-6">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-bold">Comparison Result</h3>
-                                    <span className="text-xs text-muted-foreground font-mono">{new URL(selectedScan.url).hostname}</span>
-                                </div>
-
-                                {/* Score Cards */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                    {/* My Store */}
-                                    <div className="bg-muted/30 rounded-2xl p-5 text-center border border-border">
-                                        <p className="text-sm font-semibold text-muted-foreground mb-2">Your Store</p>
-                                        <div className="text-4xl font-black font-mono">{myLatestScore}</div>
-                                        <div className="mt-2 text-xs text-muted-foreground">Current Score</div>
-                                    </div>
-
-                                    {/* VS Badge */}
-                                    <div className="flex items-center justify-center">
-                                        <div className="bg-muted rounded-full px-4 py-1 text-xs font-bold text-muted-foreground">VS</div>
-                                    </div>
-
-                                    {/* Competitor */}
-                                    <div className="bg-muted/30 rounded-2xl p-5 text-center border border-border">
-                                        <p className="text-sm font-semibold text-muted-foreground mb-2">Competitor</p>
-                                        <div className={cn("text-4xl font-black font-mono", isLosing ? "text-success" : "text-destructive")}>
-                                            {selectedScan.score}
-                                        </div>
-                                        <div className="mt-2 text-xs text-muted-foreground">Their Score</div>
-                                    </div>
-                                </div>
-
-                                {/* Gap Alert */}
-                                <div className={cn(
-                                    "rounded-xl p-5 mb-8 border flex items-center gap-4",
-                                    isLosing ? "bg-destructive/10 border-destructive/20" : "bg-success/10 border-success/20"
-                                )}>
-                                    <div className={cn(
-                                        "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
-                                        isLosing ? "bg-destructive/20" : "bg-success/20"
-                                    )}>
-                                        {isLosing ? <ShieldAlert className="w-5 h-5 text-destructive" /> : <ShieldCheck className="w-5 h-5 text-success" />}
-                                    </div>
-                                    <div>
-                                        <h4 className={cn("text-lg font-bold", isLosing ? "text-destructive" : "text-success")}>
-                                            {isLosing ? `CRITICAL GAP: ${gapValue} POINTS` : `YOU ARE WINNING BY ${gapValue} POINTS`}
-                                        </h4>
-                                        <p className="text-sm opacity-90">
-                                            {isLosing 
-                                                ? "⚠️ You are losing potential customers to this competitor due to lower trust signals." 
-                                                : "🎉 Great job! Your store has stronger trust signals than this competitor."}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Detailed Breakdown Comparison */}
-                                <div className="space-y-4">
-                                    <h4 className="font-bold text-sm uppercase tracking-wide text-muted-foreground mb-4">Category Breakdown</h4>
-                                    
-                                    {selectedScan.breakdown && Array.isArray(selectedScan.breakdown) && selectedScan.breakdown.map((item, i) => {
-                                        // Try to find matching category in myLatestScan
-                                        const myItem = getMyBreakdownItem(item.name || item.category);
-                                        const myScore = myItem ? (myItem.score || 0) : 0;
-                                        const theirScore = item.score || 0;
-                                        const max = item.maxScore || 10;
-                                        
-                                        // Only show if max > 0
-                                        if (max <= 0) return null;
-
-                                        return (
-                                            <div key={i} className="bg-muted/20 rounded-xl p-4">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="font-semibold text-sm">{item.name || item.category}</span>
-                                                    <span className="text-xs text-muted-foreground">Max: {max}</span>
-                                                </div>
-                                                
-                                                <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-                                                    {/* My Bar (Right aligned) */}
-                                                    <div className="flex flex-col items-end">
-                                                        <div className="text-xs font-mono mb-1">You: {myScore}</div>
-                                                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden flex justify-end">
-                                                            <div 
-                                                                className="h-full bg-primary" 
-                                                                style={{ width: `${(myScore / max) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="text-[10px] text-muted-foreground font-bold">VS</div>
-
-                                                    {/* Their Bar (Left aligned) */}
-                                                    <div className="flex flex-col items-start">
-                                                        <div className="text-xs font-mono mb-1">Them: {theirScore}</div>
-                                                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                                                            <div 
-                                                                className={cn("h-full", theirScore > myScore ? "bg-destructive" : "bg-success")} 
-                                                                style={{ width: `${(theirScore / max) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
+                    {/* Score Comparison Card */}
+                    <div className="bg-card rounded-2xl border border-border card-elevated p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold">Trust Gap Analysis</h3>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">vs</span>
+                                <span className="text-sm font-semibold">{new URL(selectedScan.url).hostname}</span>
                             </div>
-                        );
-                    })()}
+                        </div>
+
+                        <div className="flex items-center justify-center gap-8 mb-8">
+                            <div className="text-center">
+                                <div className="w-24 h-24 rounded-full border-4 border-primary flex items-center justify-center mb-3">
+                                    <span className="text-3xl font-bold">{myLatestScore || 0}</span>
+                                </div>
+                                <span className="text-sm font-medium text-muted-foreground">You</span>
+                            </div>
+                            
+                            <div className="flex flex-col items-center">
+                                <div className={cn(
+                                    "px-3 py-1 rounded-full text-xs font-bold mb-2",
+                                    selectedScan.score > myLatestScore ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
+                                )}>
+                                    {selectedScan.score > myLatestScore ? `-${selectedScan.score - myLatestScore} pts` : `+${myLatestScore - selectedScan.score} pts`}
+                                </div>
+                                <ArrowRight className="w-6 h-6 text-muted-foreground" />
+                            </div>
+
+                            <div className="text-center">
+                                <div className={cn(
+                                    "w-24 h-24 rounded-full border-4 flex items-center justify-center mb-3",
+                                    selectedScan.score > myLatestScore ? "border-destructive text-destructive" : "border-muted text-muted-foreground"
+                                )}>
+                                    <span className="text-3xl font-bold">{selectedScan.score}</span>
+                                </div>
+                                <span className="text-sm font-medium text-muted-foreground">Competitor</span>
+                            </div>
+                        </div>
+
+                        {/* Gap Breakdown */}
+                        <div className="space-y-4">
+                             {/* AI Insights for Competitor */}
+                             {selectedScan.result?.aiAnalysis && (
+                                <div className="bg-muted/30 rounded-xl p-4 border border-border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Trophy className="w-4 h-4 text-warning" />
+                                        <h4 className="text-sm font-bold">Winning Strategy</h4>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {typeof selectedScan.result.aiAnalysis === 'string' 
+                                            ? selectedScan.result.aiAnalysis 
+                                            : (selectedScan.result.aiAnalysis.summary || "No specific strategy detected.")}
+                                    </p>
+                                </div>
+                             )}
+                        </div>
+                    </div>
+
+                    {/* AI Comparison Recommendations */}
+                    <div className="bg-card rounded-2xl border border-border card-elevated p-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="w-8 h-8 rounded-lg bg-magic/10 flex items-center justify-center">
+                                <TrendingUp className="w-4 h-4 text-magic" />
+                            </div>
+                            <h3 className="text-lg font-bold">How to Beat Them</h3>
+                        </div>
+
+                        <div className="space-y-3">
+                            {/* We can generate these dynamically or use AI data if available */}
+                            {selectedScan.score > myLatestScore ? (
+                                <>
+                                    <div className="p-3 bg-background rounded-xl border border-border flex gap-3">
+                                        <div className="mt-1 w-5 h-5 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                                            <AlertTriangle className="w-3 h-3 text-destructive" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-semibold">Improve Visual Trust</h4>
+                                            <p className="text-xs text-muted-foreground mt-1">Their site looks more professional. Upgrade your theme or add high-quality badges.</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-background rounded-xl border border-border flex gap-3">
+                                        <div className="mt-1 w-5 h-5 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                                            <AlertTriangle className="w-3 h-3 text-destructive" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-semibold">Add More Social Proof</h4>
+                                            <p className="text-xs text-muted-foreground mt-1">They have more visible reviews/testimonials above the fold.</p>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="p-4 bg-success/10 rounded-xl text-center">
+                                    <h4 className="text-success font-bold mb-1">You are winning! 🎉</h4>
+                                    <p className="text-sm text-success/80">Your store has stronger trust signals. Keep it up!</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </motion.div>
             )}
         </AnimatePresence>
+
+        {/* History List */}
+        {scans.length > 0 && (
+            <div className="mt-8">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4">Recent Comparisons</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {scans.map((scan) => (
+                        <div 
+                            key={scan.id || scan.url}
+                            onClick={() => setSelectedScan(scan)}
+                            className={cn(
+                                "p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md",
+                                selectedScan?.url === scan.url 
+                                    ? "bg-primary/5 border-primary ring-1 ring-primary" 
+                                    : "bg-card border-border hover:border-primary/50"
+                            )}
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="font-semibold text-sm truncate max-w-[120px]">{new URL(scan.url).hostname}</span>
+                                <span className={cn(
+                                    "text-xs font-bold px-2 py-0.5 rounded-full",
+                                    scan.score >= 80 ? "bg-success/10 text-success" : 
+                                    scan.score >= 50 ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive"
+                                )}>
+                                    {scan.score}
+                                </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                                Gap: <span className={scan.score > myLatestScore ? "text-destructive" : "text-success"}>
+                                    {scan.score > myLatestScore ? `-${scan.score - myLatestScore}` : `+${myLatestScore - scan.score}`}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
     </div>
   );
 }

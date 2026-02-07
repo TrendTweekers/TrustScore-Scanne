@@ -33,9 +33,11 @@ const getFixMetadata = (issueText, revenueBracket) => {
   else if (text.includes('about')) { liftMin=3; liftMax=6; time='20 mins'; }
   else if (text.includes('social')) { liftMin=2; liftMax=4; time='5 mins'; }
   else if (text.includes('broken link') || text.includes('404')) { liftMin=4; liftMax=8; time='10 mins'; }
-  else if (text.includes('image') || text.includes('quality')) { liftMin=10; liftMax=14; time='30 mins'; }
+  else if (text.includes('image') || text.includes('quality') || text.includes('design')) { liftMin=10; liftMax=14; time='30 mins'; }
   else if (text.includes('speed') || text.includes('performance')) { liftMin=8; liftMax=15; time='45 mins'; }
   else if (text.includes('review')) { liftMin=15; liftMax=22; time='15 mins'; }
+  else if (text.includes('trust') || text.includes('badge') || text.includes('signal')) { liftMin=12; liftMax=20; time='10 mins'; }
+  else if (text.includes('ai suggestion')) { liftMin=5; liftMax=10; time='20 mins'; }
 
   // Calculate impact
   const revMin = Math.round(monthlyRev * (liftMin / 100));
@@ -83,7 +85,28 @@ const getAutoFixAction = (issueText, shopDomain) => {
 const FixRecommendations = ({ recommendations, revenueBracket, plan, shopDomain }) => {
   const [expandedFix, setExpandedFix] = useState(0);
 
-  if (!recommendations || recommendations.length === 0) return null;
+  if (!recommendations || recommendations.length === 0) {
+      return (
+        <div className="bg-card rounded-2xl border border-border card-elevated p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <Flame className="w-5 h-5 text-primary" />
+                    <h3 className="text-lg font-bold">Top Priority Fixes</h3>
+                </div>
+            </div>
+            <div className="p-8 bg-success/5 border border-success/10 rounded-2xl text-center">
+                <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-8 h-8 text-success" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">No Critical Issues Found!</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                    Great job! We couldn't find any high-priority trust issues on your store. 
+                    Keep monitoring your score to stay ahead.
+                </p>
+            </div>
+        </div>
+      );
+  }
 
   const fixes = recommendations.map(rec => {
     const meta = getFixMetadata(rec.issue, revenueBracket);
@@ -94,7 +117,7 @@ const FixRecommendations = ({ recommendations, revenueBracket, plan, shopDomain 
         estimatedLift: meta.lift,
         revenueImpact: meta.revenue,
         fixTime: meta.time,
-        description: rec.description || "No description available.",
+        description: rec.howToFix || rec.description || "No description available.",
         actionLabel: action.label,
         actionUrl: action.url,
         isPro: false // Assuming mostly available or derived from somewhere

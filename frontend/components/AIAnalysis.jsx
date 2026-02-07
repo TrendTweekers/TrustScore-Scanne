@@ -63,6 +63,24 @@ const AIAnalysis = ({ analysis, plan, aiUsageCount, onUpgrade }) => {
   // Helper to parse if analysis is string or object
   // Sometimes it comes as a string JSON from backend if not parsed correctly
   let data = analysis;
+  
+  if (!data) {
+    // Fallback for Pro users if AI failed or data missing
+    return (
+        <div className="bg-card rounded-2xl border border-border card-elevated p-6 mb-6">
+            <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-magic/10 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-magic" />
+                </div>
+                <h3 className="text-lg font-bold">AI Qualitative Analysis</h3>
+            </div>
+            <div className="p-4 bg-muted/30 rounded-xl border border-border text-center text-muted-foreground text-sm">
+                AI analysis is pending or unavailable for this scan. Try running the audit again.
+            </div>
+        </div>
+    );
+  }
+
   if (typeof analysis === 'string') {
       try {
           data = JSON.parse(analysis);

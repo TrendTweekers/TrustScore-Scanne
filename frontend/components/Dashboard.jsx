@@ -252,6 +252,9 @@ function Dashboard() {
   const { currentScore, trend, history, plan, scanCount, aiUsage, shopData } = dashboardData;
   const isFree = plan === 'FREE';
 
+  // Fix ReferenceError and ensure fallback
+  const aiUsageCount = aiUsage ?? shopData?.ai_usage_count ?? 0;
+
   const revenueBracket = shopData?.revenue_bracket;
   const revenueEstimate = calculateRevenueEstimate(revenueBracket, currentScore);
 
@@ -293,10 +296,11 @@ function Dashboard() {
         {toastMsg && <Toast content={toastMsg} onDismiss={toggleToast} duration={4000} />}
 
         <Layout>
-            {selectedTab === 'dashboard' ? (
+            {selectedTab === 'dashboard' && (
                 <>
                     <Layout.Section>
                         <ScoreHero 
+                            key={scanResult?.score || currentScore}
                             score={scanResult?.score || currentScore || 0}
                             maxScore={100}
                             lastScanTime={lastScannedText}
@@ -349,7 +353,7 @@ function Dashboard() {
                             <ScoreChart />
 
                             <TrustScore 
-                                result={scanResult} 
+                                result={scanResult}
                                 plan={plan}
                                 aiUsageCount={aiUsageCount}
                                 onUpgrade={() => setShowUpgradeModal(true)}
@@ -462,16 +466,19 @@ function Dashboard() {
                          </BlockStack>
                     </Layout.Section>
                 </>
-            ) : selectedTab === 'competitors' ? (
-                <Layout.Section>
-                    <CompetitorComparison 
-                        userPlan={plan} 
-                        myLatestScore={currentScore} 
-                        shopData={shopData} 
-                        myLatestScan={history.length > 0 ? history[0] : null}
-                    />
-                </Layout.Section>
-            ) : (
+            )}
+
+            {selectedTab === 'competitors' && (
+                <CompetitorComparison 
+                    userPlan={plan}
+                    myLatestScore={currentScore}
+                    shopData={shopData}
+                    myLatestScan={scanResult}
+                    onUpgrade={() => setShowUpgradeModal(true)}
+                />
+            )}
+
+            {selectedTab === 'help' && (
                 <Layout.Section>
                     <FAQ />
                 </Layout.Section>
