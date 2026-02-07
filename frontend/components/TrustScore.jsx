@@ -6,7 +6,7 @@ import AIAnalysis from './AIAnalysis';
 import ScoreBreakdown from './ScoreBreakdown';
 import FixRecommendations from './FixRecommendations';
 
-function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loading, onScan }) {
+function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loading, onScan, shopData }) {
   const [progress, setProgress] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const prevScoreRef = React.useRef(null);
@@ -159,7 +159,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
 
           {/* New Lovable AI Analysis */}
           <AIAnalysis 
-            analysis={data.aiAnalysis} 
+            analysis={data.aiAnalysis || result.aiAnalysis} 
             plan={plan} 
             aiUsageCount={aiUsageCount} 
             onUpgrade={onUpgrade} 
@@ -173,6 +173,7 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
             recommendations={recommendations} 
             revenueBracket={revenueBracket} 
             plan={plan} 
+            shopDomain={shopData?.myshopify_domain || shopData?.domain}
           />
 
           {/* Screenshots Section */}

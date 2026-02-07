@@ -293,7 +293,7 @@ function Dashboard() {
                 <>
                     <Layout.Section>
                         <ScoreHero 
-                            score={currentScore || 0}
+                            score={scanResult?.score || currentScore || 0}
                             maxScore={100}
                             lastScanTime={lastScannedText}
                             trend={trend || 0}
@@ -347,11 +347,12 @@ function Dashboard() {
                             <TrustScore 
                                 result={scanResult} 
                                 plan={plan}
-                                aiUsageCount={aiUsage}
+                                aiUsageCount={aiUsageCount}
                                 onUpgrade={() => setShowUpgradeModal(true)}
                                 loading={loading}
                                 onScan={handleScan}
                                 revenueBracket={revenueBracket}
+                                shopData={shopData}
                             />
                         </BlockStack>
                     </Layout.Section>

@@ -50,11 +50,11 @@ const getFixMetadata = (issueText, revenueBracket) => {
   };
 };
 
-const getAutoFixAction = (issueText) => {
+const getAutoFixAction = (issueText, shopDomain) => {
   const text = issueText.toLowerCase();
-  // Using window.shopOrigin or defaulting to empty
-  const shopDomain = window.shopOrigin || ''; 
-  const storeName = shopDomain.replace('.myshopify.com', '');
+  // Use passed shopDomain or fallback (though fallback is unreliable in iframe)
+  const domain = shopDomain || window.shopOrigin || ''; 
+  const storeName = domain.replace('.myshopify.com', '');
   const adminUrl = `https://admin.shopify.com/store/${storeName}`;
 
   if (text.includes('policy') || text.includes('refund') || text.includes('return')) {
@@ -80,14 +80,14 @@ const getAutoFixAction = (issueText) => {
   return { label: 'Learn More', url: 'https://help.shopify.com' };
 };
 
-const FixRecommendations = ({ recommendations, revenueBracket, plan }) => {
+const FixRecommendations = ({ recommendations, revenueBracket, plan, shopDomain }) => {
   const [expandedFix, setExpandedFix] = useState(0);
 
   if (!recommendations || recommendations.length === 0) return null;
 
   const fixes = recommendations.map(rec => {
     const meta = getFixMetadata(rec.issue, revenueBracket);
-    const action = getAutoFixAction(rec.issue);
+    const action = getAutoFixAction(rec.issue, shopDomain);
     return {
         severity: rec.priority ? rec.priority.toUpperCase() : 'MEDIUM',
         title: rec.issue,
