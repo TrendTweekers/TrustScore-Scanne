@@ -202,7 +202,11 @@ function Dashboard() {
              setToastMsg('Scan failed: ' + (data.error || 'Unknown error'));
          }
       } else {
-         setScanResult(data.result); // Use the full result structure
+         setScanResult({
+             ...data.result,
+             score: data.score,
+             aiAnalysis: data.aiAnalysis 
+         }); 
          loadDashboard(); // Refresh history
          setToastMsg('Trust Audit Completed! 🎉');
       }

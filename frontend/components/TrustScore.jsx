@@ -48,6 +48,103 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
       return "Generating recommendations...";
   };
 
+  // Helper to render analysis for a specific page type
+  const renderAnalysis = (data, type) => {
+      // Ensure recommendations is always an array
+      const { score, screenshots, breakdown, data: rawData } = data;
+      const recommendations = data.recommendations || [];
+      
+      return (
+        <div className="fade-in-up">
+        <BlockStack gap="800">
+            <style>{`
+                .fade-in-up {
+                    animation: fadeInUp 0.5s ease-out forwards;
+                }
+                @keyframes fadeInUp {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
+          {type === 'product' && rawData && (
+             <Card>
+                <BlockStack gap="200">
+                    <Text variant="headingMd" as="h2">Analyzed Product</Text>
+                    {rawData.found ? (
+                        <Text as="p">
+                           <a href={rawData.url} target="_blank" rel="noopener noreferrer" style={{color: '#2C6ECB'}}>{rawData.url}</a>
+                        </Text>
+                    ) : (
+                        <Banner tone="warning">Could not find a product page to analyze. Please ensure your homepage has visible links to products.</Banner>
+                    )}
+                </BlockStack>
+             </Card>
+          )}
+
+          {/* New Lovable AI Analysis */}
+          <AIAnalysis 
+            analysis={data.aiAnalysis} 
+            plan={plan} 
+            aiUsageCount={aiUsageCount} 
+            onUpgrade={onUpgrade} 
+          />
+
+          {/* New Lovable Score Breakdown */}
+          <ScoreBreakdown breakdown={breakdown} />
+
+          {/* New Lovable Recommendations */}
+          <FixRecommendations 
+            recommendations={recommendations} 
+            revenueBracket={revenueBracket} 
+            plan={plan} 
+            shopDomain={shopData?.myshopify_domain || shopData?.domain}
+          />
+
+          {/* Screenshots Section */}
+          {(screenshots || (rawData && rawData.screenshots)) && (
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingMd" as="h2">{type === 'homepage' ? 'Homepage' : 'Product Page'} Screenshots</Text>
+                <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                  {(screenshots?.desktop || rawData?.screenshots?.desktop) && (
+                    <Box>
+                      <Text variant="headingSm" as="h3">Desktop View</Text>
+                      <img 
+                        src={`data:image/png;base64,${screenshots?.desktop || rawData?.screenshots?.desktop}`} 
+                        alt="Desktop View" 
+                        style={{ width: '100%', height: 'auto', border: '1px solid #ccc', borderRadius: '4px', marginTop: '8px' }} 
+                      />
+                    </Box>
+                  )}
+                  {(screenshots?.mobile || rawData?.screenshots?.mobile) && (
+                    <Box>
+                      <Text variant="headingSm" as="h3">Mobile View</Text>
+                      <div style={{ width: '375px', maxWidth: '100%', margin: '0 auto' }}>
+                        <img 
+                          src={`data:image/png;base64,${screenshots?.mobile || rawData?.screenshots?.mobile}`} 
+                          alt="Mobile View" 
+                          style={{ width: '100%', height: 'auto', border: '1px solid #ccc', borderRadius: '4px', marginTop: '8px' }} 
+                        />
+                      </div>
+                    </Box>
+                  )}
+                </InlineGrid>
+              </BlockStack>
+            </Card>
+          )}
+
+          {/* Founder Trust Signal */}
+          <Box paddingBlockStart="800" paddingBlockEnd="400">
+              <Text variant="bodySm" tone="subdued" alignment="center">
+                  Built by an independent founder. <br/>
+                  Questions? I personally reply within 24 hours.
+              </Text>
+          </Box>
+        </BlockStack>
+        </div>
+      );
+  };
+
   if (loading) {
       return (
         <Card>
@@ -111,8 +208,10 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
       );
   }
 
-  const isNewStructure = result.homepage && result.productPage;
-  
+  // Handle new structured result (homepage/productPage) vs old flat result
+  // If result.homepage exists, we treat it as structured, but we need to ensure AI Analysis is passed down
+  const isNewStructure = result.homepage && (result.productPage || result.homepage.score);
+
   const tabs = [
     {
       id: 'homepage-analysis',
@@ -126,104 +225,28 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
     },
   ];
 
-  // Helper to render analysis for a specific page type
-  const renderAnalysis = (data, type) => {
-      const { score, recommendations, screenshots, breakdown, data: rawData } = data;
-      
-      return (
-        <div className="fade-in-up">
-        <BlockStack gap="800">
-            <style>{`
-                .fade-in-up {
-                    animation: fadeInUp 0.5s ease-out forwards;
-                }
-                @keyframes fadeInUp {
-                  from { opacity: 0; transform: translateY(10px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
-          {type === 'product' && rawData && (
-             <Card>
-                <BlockStack gap="200">
-                    <Text variant="headingMd" as="h2">Analyzed Product</Text>
-                    {rawData.found ? (
-                        <Text as="p">
-                           <a href={rawData.url} target="_blank" rel="noopener noreferrer" style={{color: '#2C6ECB'}}>{rawData.url}</a>
-                        </Text>
-                    ) : (
-                        <Banner tone="warning">Could not find a product page to analyze. Please ensure your homepage has visible links to products.</Banner>
-                    )}
-                </BlockStack>
-             </Card>
-          )}
-
-          {/* New Lovable AI Analysis */}
-          <AIAnalysis 
-            analysis={data.aiAnalysis || result.aiAnalysis} 
-            plan={plan} 
-            aiUsageCount={aiUsageCount} 
-            onUpgrade={onUpgrade} 
-          />
-
-          {/* New Lovable Score Breakdown */}
-          <ScoreBreakdown breakdown={breakdown} />
-
-          {/* New Lovable Recommendations */}
-          <FixRecommendations 
-            recommendations={recommendations} 
-            revenueBracket={revenueBracket} 
-            plan={plan} 
-            shopDomain={shopData?.myshopify_domain || shopData?.domain}
-          />
-
-          {/* Screenshots Section */}
-          {(screenshots || (rawData && rawData.screenshots)) && (
-            <Card>
-              <BlockStack gap="400">
-                <Text variant="headingMd" as="h2">{type === 'homepage' ? 'Homepage' : 'Product Page'} Screenshots</Text>
-                <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
-                  {(screenshots?.desktop || rawData?.screenshots?.desktop) && (
-                    <Box>
-                      <Text variant="headingSm" as="h3">Desktop View</Text>
-                      <img 
-                        src={`data:image/png;base64,${screenshots?.desktop || rawData?.screenshots?.desktop}`} 
-                        alt="Desktop View" 
-                        style={{ width: '100%', height: 'auto', border: '1px solid #ccc', borderRadius: '4px', marginTop: '8px' }} 
-                      />
-                    </Box>
-                  )}
-                  {(screenshots?.mobile || rawData?.screenshots?.mobile) && (
-                    <Box>
-                      <Text variant="headingSm" as="h3">Mobile View</Text>
-                      <div style={{ width: '375px', maxWidth: '100%', margin: '0 auto' }}>
-                        <img 
-                          src={`data:image/png;base64,${screenshots?.mobile || rawData?.screenshots?.mobile}`} 
-                          alt="Mobile View" 
-                          style={{ width: '100%', height: 'auto', border: '1px solid #ccc', borderRadius: '4px', marginTop: '8px' }} 
-                        />
-                      </div>
-                    </Box>
-                  )}
-                </InlineGrid>
-              </BlockStack>
-            </Card>
-          )}
-
-          {/* Founder Trust Signal */}
-          <Box paddingBlockStart="800" paddingBlockEnd="400">
-              <Text variant="bodySm" tone="subdued" alignment="center">
-                  Built by an independent founder. <br/>
-                  Questions? I personally reply within 24 hours.
-              </Text>
-          </Box>
-        </BlockStack>
-        </div>
-      );
-  };
-
   if (!isNewStructure) {
-      return renderAnalysis(result, 'homepage');
+      // Ensure aiAnalysis is passed even if flat structure
+      // We look for aiAnalysis at root, or nested in data
+      const flatData = { 
+          ...result, 
+          aiAnalysis: result.aiAnalysis || result.data?.aiAnalysis 
+      };
+      return renderAnalysis(flatData, 'homepage');
   }
+
+  // For structured results, we handle tab switching
+  // But we need to ensure renderAnalysis gets the AI data which might be at root
+  // We'll wrap the render logic to inject root AI data if missing in page data
+  
+  const renderPageAnalysis = (pageData, type) => {
+      // Inject root aiAnalysis if pageData doesn't have it
+      const dataWithAI = {
+          ...pageData,
+          aiAnalysis: pageData.aiAnalysis || result.aiAnalysis
+      };
+      return renderAnalysis(dataWithAI, type);
+  };
 
   return (
     <div className="trust-score-root">
@@ -231,7 +254,10 @@ function TrustScore({ result, plan, aiUsageCount, onUpgrade, revenueBracket, loa
         <BlockStack gap="800">
             <Tabs tabs={tabs} selected={selectedTab} onSelect={handleTabChange}>
             <Box paddingBlockStart="400">
-                {selectedTab === 0 ? renderAnalysis(result.homepage, 'homepage') : renderAnalysis(result.productPage, 'product')}
+                {selectedTab === 0 
+                    ? renderPageAnalysis(result.homepage, 'homepage') 
+                    : renderPageAnalysis(result.productPage, 'product')
+                }
             </Box>
             </Tabs>
         </BlockStack>
