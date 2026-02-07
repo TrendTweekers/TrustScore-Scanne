@@ -307,6 +307,7 @@ function Dashboard() {
                             trend={trend || 0}
                             plan={plan}
                             estimatedConversionLoss={estimatedConversionLoss}
+                            revenueEstimate={revenueEstimate}
                         />
                     </Layout.Section>
 
