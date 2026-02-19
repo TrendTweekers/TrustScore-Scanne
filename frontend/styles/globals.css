@@ -56,10 +56,10 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    --gradient-header: linear-gradient(135deg, hsl(160 84% 39%), hsl(152 76% 30%));
+    --gradient-header: linear-gradient(135deg, hsl(160 84% 39%), hsl(158 72% 28%));
     --gradient-score-bg: linear-gradient(180deg, hsl(220 20% 97%), hsl(0 0% 100%));
     --shadow-card: 0 1px 3px 0 hsl(220 20% 10% / 0.04), 0 1px 2px -1px hsl(220 20% 10% / 0.04);
-    --shadow-card-hover: 0 4px 12px -2px hsl(220 20% 10% / 0.08), 0 2px 6px -2px hsl(220 20% 10% / 0.04);
+    --shadow-card-hover: 0 8px 24px -4px hsl(220 20% 10% / 0.08), 0 4px 8px -4px hsl(220 20% 10% / 0.04);
     --shadow-score: 0 8px 32px -8px hsl(160 84% 39% / 0.15);
   }
 
@@ -110,6 +110,7 @@
 }
 
 @layer components {
+  /* ---- Score ring effects ---- */
   .score-ring {
     filter: drop-shadow(0 4px 16px hsl(var(--score-critical) / 0.2));
   }
@@ -118,19 +119,33 @@
     filter: drop-shadow(0 4px 16px hsl(var(--score-good) / 0.2));
   }
 
+  /* ---- Card system ---- */
   .card-elevated {
     box-shadow: var(--shadow-card);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
   }
 
   .card-elevated:hover {
     box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
   }
 
+  /* ---- Header gradient ---- */
   .gradient-header {
     background: var(--gradient-header);
+    position: relative;
+    overflow: hidden;
   }
 
+  .gradient-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 80% 20%, hsl(160 84% 50% / 0.15), transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ---- Animations ---- */
   .animate-score-in {
     animation: scoreIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -161,9 +176,14 @@
     }
   }
 
+  /* ---- Priority severity borders ---- */
   .priority-high {
     border-left: 4px solid hsl(var(--destructive));
     background: hsl(var(--destructive) / 0.04);
+  }
+
+  .priority-high:hover {
+    background: hsl(var(--destructive) / 0.07);
   }
 
   .priority-medium {
@@ -171,8 +191,16 @@
     background: hsl(var(--warning) / 0.04);
   }
 
+  .priority-medium:hover {
+    background: hsl(var(--warning) / 0.07);
+  }
+
   .priority-low {
     border-left: 4px solid hsl(var(--success));
     background: hsl(var(--success) / 0.04);
+  }
+
+  .priority-low:hover {
+    background: hsl(var(--success) / 0.07);
   }
 }

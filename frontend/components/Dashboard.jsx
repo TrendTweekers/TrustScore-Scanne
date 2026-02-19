@@ -4,20 +4,25 @@ import { ShieldCheck, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import DashboardHeader from './DashboardHeader';
 import ScoreHero from './ScoreHero';
 import ScoreBreakdown from './ScoreBreakdown';
+import ScoreHistory from './ScoreHistory';
 import AIAnalysis from './AIAnalysis';
 import FixRecommendations from './FixRecommendations';
+import Screenshots from './Screenshots';
 import MonitoringCard from './MonitoringCard';
 import CredibilityCard from './CredibilityCard';
 import RecentScans from './RecentScans';
 import CompetitorView from './CompetitorView';
 import HelpFAQ from './HelpFAQ';
 
+// ─── Utility components ────────────────────────────────────────────────
+
 const ScanProgressOverlay = ({ progress }) => {
   const getStatusText = () => {
-    if (progress < 25) return "Capturing screenshots...";
-    if (progress < 50) return "Analyzing trust signals...";
-    if (progress < 75) return "Calculating score...";
-    return "Generating recommendations...";
+    if (progress < 20) return "Capturing screenshots...";
+    if (progress < 45) return "Analyzing trust signals...";
+    if (progress < 70) return "Calculating score...";
+    if (progress < 90) return "Generating recommendations...";
+    return "Finishing up...";
   };
 
   return (
@@ -59,7 +64,7 @@ const EmptyDashboard = ({ onRunScan }) => (
       </div>
       <h3 className="text-xl font-semibold mb-2">Ready to audit your store?</h3>
       <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-        Get a 0–100 trust score, identify gaps hurting your conversions, and receive
+        Get a 0-100 trust score, identify gaps hurting your conversions, and receive
         AI-powered recommendations — all in about 60 seconds.
       </p>
       <button
@@ -97,6 +102,8 @@ const ErrorState = ({ onRetry }) => (
   </div>
 );
 
+// ─── Main Dashboard ────────────────────────────────────────────────────
+
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isScanning, setIsScanning] = useState(false);
@@ -105,15 +112,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [scanError, setScanError] = useState(null);
+  const [lastScanScreenshots, setLastScanScreenshots] = useState(null);
   const authenticatedFetch = useAuthenticatedFetch();
   const progressRef = useRef(null);
 
-  // Fetch dashboard data on mount
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  // Clean up progress interval
   useEffect(() => {
     return () => {
       if (progressRef.current) clearInterval(progressRef.current);
@@ -126,6 +132,15 @@ const Dashboard = () => {
       const response = await authenticatedFetch('/api/dashboard');
       const data = await response.json();
       setDashboardData(data);
+
+      // Extract screenshots from most recent scan result
+      const latest = data?.history?.[0];
+      if (latest?.result) {
+        const result = typeof latest.result === 'string' ? JSON.parse(latest.result) : latest.result;
+        if (result.screenshots) {
+          setLastScanScreenshots(result.screenshots);
+        }
+      }
     } catch (err) {
       console.error('Failed to load dashboard:', err);
       setError(err);
@@ -139,28 +154,30 @@ const Dashboard = () => {
     setScanProgress(0);
     setScanError(null);
 
-    // Simulate progress since the backend doesn't stream progress
     progressRef.current = setInterval(() => {
       setScanProgress((prev) => {
         if (prev >= 92) return prev;
-        // Fast at first, then slow down
         const increment = prev < 30 ? 2.5 : prev < 60 ? 1.5 : 0.5;
         return prev + increment;
       });
     }, 400);
 
     try {
-      await authenticatedFetch('/api/scan', {
+      const response = await authenticatedFetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
 
-      // Jump to 100% on success
+      const scanData = await response.json();
+
+      // Capture screenshots from scan response
+      if (scanData.screenshots) {
+        setLastScanScreenshots(scanData.screenshots);
+      }
+
       clearInterval(progressRef.current);
       setScanProgress(100);
-
-      // Brief pause to show 100%, then reload
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 600));
       await loadDashboard();
     } catch (err) {
       console.error('Scan failed:', err);
@@ -173,12 +190,20 @@ const Dashboard = () => {
     }
   };
 
-  // ---------- Loading skeleton ----------
+  const handleUpgrade = () => {
+    // Redirect to Shopify billing / pricing page
+    const shopDomain = new URLSearchParams(window.location.search).get('shop') || '';
+    const storeName = shopDomain.replace('.myshopify.com', '');
+    if (storeName) {
+      window.top.location.href = `https://admin.shopify.com/store/${storeName}/charges/trustscore-scanner/pricing_plans`;
+    }
+  };
+
+  // ── Loading skeleton ─────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-          {/* Header skeleton */}
           <div className="gradient-header rounded-xl p-4 flex items-center justify-between animate-pulse">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary-foreground/20" />
@@ -189,13 +214,11 @@ const Dashboard = () => {
             </div>
             <div className="w-32 h-10 rounded-lg bg-primary-foreground/20" />
           </div>
-          {/* Tab skeleton */}
           <div className="flex gap-1">
             <div className="w-24 h-10 bg-muted rounded-lg animate-pulse" />
             <div className="w-48 h-10 bg-muted/50 rounded-lg animate-pulse" />
             <div className="w-24 h-10 bg-muted/50 rounded-lg animate-pulse" />
           </div>
-          {/* Content skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
             <div className="space-y-5">
               <SkeletonCard className="h-64" />
@@ -211,7 +234,7 @@ const Dashboard = () => {
     );
   }
 
-  // ---------- Error state ----------
+  // ── Error state ──────────────────────────────────────────────────────
   if (error && !dashboardData) {
     return (
       <div className="min-h-screen bg-background">
@@ -228,7 +251,7 @@ const Dashboard = () => {
     );
   }
 
-  // ---------- Derived state ----------
+  // ── Derived state ────────────────────────────────────────────────────
   const plan = dashboardData?.plan || 'FREE';
   const aiUsageCount = dashboardData?.aiUsage || 0;
   const aiUsageLimit = plan === 'PRO' ? 10 : plan === 'PLUS' ? 999 : 0;
@@ -237,13 +260,11 @@ const Dashboard = () => {
   const score = lastScan?.score || dashboardData?.currentScore || 0;
   const trend = dashboardData?.trend || 0;
 
-  // Format last scan time
   let lastScanTime = "Never";
   if (lastScan?.timestamp) {
     const date = new Date(lastScan.timestamp);
     const now = new Date();
     const diffMinutes = Math.floor((now - date) / (1000 * 60));
-
     if (diffMinutes < 1) lastScanTime = "Just now";
     else if (diffMinutes < 60) lastScanTime = `${diffMinutes} min ago`;
     else if (diffMinutes < 1440) lastScanTime = `${Math.floor(diffMinutes / 60)} hours ago`;
@@ -252,6 +273,12 @@ const Dashboard = () => {
 
   const estimatedConversionLoss = Math.max(0, Math.round((100 - score) * 0.35));
   const hasScans = dashboardData?.history?.length > 0;
+
+  // Parse scan result (could be a JSON string in the DB)
+  let scanResult = null;
+  if (lastScan?.result) {
+    scanResult = typeof lastScan.result === 'string' ? JSON.parse(lastScan.result) : lastScan.result;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -268,28 +295,23 @@ const Dashboard = () => {
           <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/10 text-sm">
             <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
             <span className="text-destructive font-medium">{scanError}</span>
-            <button
-              onClick={() => setScanError(null)}
-              className="ml-auto text-xs text-muted-foreground hover:text-foreground"
-            >
+            <button onClick={() => setScanError(null)} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
               Dismiss
             </button>
           </div>
         )}
 
+        {/* ═══════ Dashboard Tab ═══════ */}
         {activeTab === "dashboard" && (
           <>
-            {/* Scan in progress */}
             {isScanning && (
               <ScanProgressOverlay progress={scanProgress} />
             )}
 
-            {/* Empty state — no scans yet */}
             {!isScanning && !hasScans && (
               <EmptyDashboard onRunScan={handleRunScan} />
             )}
 
-            {/* Normal dashboard with data */}
             {!isScanning && hasScans && (
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
                 {/* Main column */}
@@ -303,17 +325,31 @@ const Dashboard = () => {
                     estimatedConversionLoss={estimatedConversionLoss}
                   />
 
-                  {lastScan?.result && (
+                  <ScoreHistory
+                    history={dashboardData?.history || []}
+                    plan={plan}
+                    onUpgrade={handleUpgrade}
+                  />
+
+                  {scanResult && (
                     <>
-                      <ScoreBreakdown breakdown={lastScan.result.breakdown || []} />
+                      <ScoreBreakdown breakdown={scanResult.breakdown || []} />
                       <AIAnalysis
                         plan={plan}
                         aiUsageCount={aiUsageCount}
                         aiUsageLimit={aiUsageLimit}
-                        analysis={lastScan.result.aiAnalysis}
+                        analysis={scanResult.aiAnalysis}
+                        onUpgrade={handleUpgrade}
                       />
                       <FixRecommendations
-                        recommendations={lastScan.result.recommendations || []}
+                        recommendations={scanResult.recommendations || []}
+                        plan={plan}
+                        onUpgrade={handleUpgrade}
+                      />
+                      <Screenshots
+                        screenshots={lastScanScreenshots || scanResult.screenshots}
+                        plan={plan}
+                        onUpgrade={handleUpgrade}
                       />
                     </>
                   )}
@@ -321,7 +357,7 @@ const Dashboard = () => {
 
                 {/* Sidebar */}
                 <div className="space-y-4">
-                  <MonitoringCard plan={plan} />
+                  <MonitoringCard plan={plan} onUpgrade={handleUpgrade} />
                   <CredibilityCard />
                   <RecentScans history={dashboardData?.history || []} />
                 </div>
@@ -330,15 +366,18 @@ const Dashboard = () => {
           </>
         )}
 
+        {/* ═══════ Competitor Tab ═══════ */}
         {activeTab === "competitor" && (
           <CompetitorView
             yourScore={score}
             plan={plan}
             auditsUsed={0}
             auditsLimit={plan === 'PRO' ? 5 : plan === 'PLUS' ? 20 : 0}
+            onUpgrade={handleUpgrade}
           />
         )}
 
+        {/* ═══════ Help Tab ═══════ */}
         {activeTab === "help" && (
           <HelpFAQ />
         )}

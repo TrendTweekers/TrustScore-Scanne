@@ -1,18 +1,30 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus, Clock, BarChart3, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Count-up hook
+const useCountUp = (target, duration = 1200) => {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (target === 0) { setValue(0); return; }
+    const start = performance.now();
+    const step = (now) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, duration]);
+  return value;
+};
 
-const ScoreHero = ({ score, maxScore, lastScanTime, trend, plan, estimatedConversionLoss  }) => {
+const ScoreHero = ({ score, maxScore, lastScanTime, trend, plan, estimatedConversionLoss }) => {
   const percentage = (score / maxScore) * 100;
-
-  const scoreColor = useMemo(() => {
-    if (percentage < 40) return "score-critical";
-    if (percentage < 60) return "score-warning";
-    if (percentage < 80) return "score-good";
-    return "score-excellent";
-  }, [percentage]);
+  const displayScore = useCountUp(score);
 
   const riskLevel = useMemo(() => {
     if (percentage < 40) return { label: "At Risk", color: "bg-destructive/10 text-destructive border-destructive/20" };
@@ -56,7 +68,7 @@ const ScoreHero = ({ score, maxScore, lastScanTime, trend, plan, estimatedConver
       <div className="flex items-center gap-10">
         {/* Donut */}
         <motion.div
-          className="relative flex-shrink-0 animate-score-in"
+          className="relative flex-shrink-0"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -84,14 +96,7 @@ const ScoreHero = ({ score, maxScore, lastScanTime, trend, plan, estimatedConver
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <motion.span
-              className="text-4xl font-extrabold font-mono"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              {score}
-            </motion.span>
+            <span className="text-4xl font-extrabold font-mono">{displayScore}</span>
             <span className="text-sm text-muted-foreground">/ {maxScore}</span>
           </div>
         </motion.div>
@@ -145,7 +150,7 @@ const ScoreHero = ({ score, maxScore, lastScanTime, trend, plan, estimatedConver
         transition={{ delay: 0.8 }}
       >
         <p className="text-xs text-muted-foreground leading-relaxed">
-          💡 Most new stores score 15–35 on their first scan. Scores improve fast after fixing top issues.
+          Most new stores score 15-35 on their first scan. Scores improve fast after fixing top issues.
         </p>
       </motion.div>
     </div>

@@ -1,8 +1,7 @@
-import { Bell, Mail, ShieldAlert } from "lucide-react";
+import { Bell, Mail, ShieldAlert, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-
-const MonitoringCard = ({ plan  }) => {
+const MonitoringCard = ({ plan, onUpgrade }) => {
   const isPro = plan === "PRO" || plan === "PLUS";
 
   return (
@@ -49,13 +48,21 @@ const MonitoringCard = ({ plan  }) => {
           <div className="pt-2 border-t border-border">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Alerts sent this month</span>
-              <span className="font-mono">0/∞</span>
+              <span className="font-mono">0</span>
             </div>
           </div>
         )}
       </div>
 
-      {isPro && (
+      {!isPro ? (
+        <button
+          onClick={onUpgrade}
+          className="w-full mt-4 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-foreground text-background text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Lock className="w-3 h-3" />
+          Unlock Monitoring — PRO
+        </button>
+      ) : (
         <button className="w-full mt-4 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
           Preview Sample Report
         </button>
