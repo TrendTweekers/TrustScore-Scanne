@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
-import { Sparkles, Palette, Users, AlertCircle, CheckCircle2, Lock } from "lucide-react";
+import { Sparkles, Palette, Users, AlertCircle, CheckCircle2, Lock, Monitor, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
-const AIAnalysis = ({ plan, aiUsageCount, aiUsageLimit, analysis, onUpgrade }) => {
+const AIAnalysis = ({ plan, aiUsageCount, aiUsageLimit, analysis, screenshots, onUpgrade }) => {
+  const [activeScreenshotView, setActiveScreenshotView] = useState("desktop");
   const isPro = plan === "PRO" || plan === "PLUS";
 
   if (!isPro) {
@@ -12,7 +15,17 @@ const AIAnalysis = ({ plan, aiUsageCount, aiUsageLimit, analysis, onUpgrade }) =
           <h3 className="text-base font-semibold">AI Qualitative Analysis</h3>
         </div>
 
-        {/* Blurred preview */}
+        {/* Store screenshot proof (visible but blurred for FREE) */}
+        {screenshots && (screenshots.desktop || screenshots.mobile) && (
+          <div className="mb-4 relative rounded-lg border border-border overflow-hidden bg-muted/30">
+            <div className="blur-md pointer-events-none select-none h-32 bg-muted/50" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Monitor className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </div>
+        )}
+
+        {/* Blurred analysis preview */}
         <div className="relative">
           <div className="blur-sm pointer-events-none select-none opacity-60">
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -77,6 +90,67 @@ const AIAnalysis = ({ plan, aiUsageCount, aiUsageLimit, analysis, onUpgrade }) =
           {aiUsageCount}/{aiUsageLimit} analyses used
         </span>
       </div>
+
+      {/* Store screenshots - shows what AI actually scanned */}
+      {screenshots && (screenshots.desktop || screenshots.mobile) && (
+        <div className="mb-5 rounded-lg border border-border overflow-hidden bg-muted/30">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/20">
+            <span className="text-xs font-medium text-muted-foreground">Scanned Pages</span>
+            <div className="flex items-center gap-1 bg-muted rounded p-0.5">
+              <button
+                onClick={() => setActiveScreenshotView("desktop")}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all",
+                  activeScreenshotView === "desktop"
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Monitor className="w-3 h-3" /> Desktop
+              </button>
+              <button
+                onClick={() => setActiveScreenshotView("mobile")}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all",
+                  activeScreenshotView === "mobile"
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Smartphone className="w-3 h-3" /> Mobile
+              </button>
+            </div>
+          </div>
+          <div className="relative">
+            {activeScreenshotView === "desktop" && screenshots.desktop && (
+              <img
+                src={`data:image/png;base64,${screenshots.desktop}`}
+                alt="Desktop view of scanned store"
+                className="w-full h-auto max-h-64 object-cover"
+              />
+            )}
+            {activeScreenshotView === "mobile" && screenshots.mobile && (
+              <div className="flex justify-center py-4">
+                <img
+                  src={`data:image/png;base64,${screenshots.mobile}`}
+                  alt="Mobile view of scanned store"
+                  className="max-w-[280px] h-auto rounded border border-border"
+                />
+              </div>
+            )}
+            {activeScreenshotView === "desktop" && !screenshots.desktop && (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                Desktop screenshot not available
+              </div>
+            )}
+            {activeScreenshotView === "mobile" && !screenshots.mobile && (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                Mobile screenshot not available
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {hasError ? (
         <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/5 border border-destructive/10">

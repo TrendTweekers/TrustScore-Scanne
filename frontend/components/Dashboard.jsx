@@ -7,7 +7,6 @@ import ScoreBreakdown from './ScoreBreakdown';
 import ScoreHistory from './ScoreHistory';
 import AIAnalysis from './AIAnalysis';
 import FixRecommendations from './FixRecommendations';
-import Screenshots from './Screenshots';
 import MonitoringCard from './MonitoringCard';
 import CredibilityCard from './CredibilityCard';
 import RecentScans from './RecentScans';
@@ -339,15 +338,11 @@ const Dashboard = () => {
                         aiUsageCount={aiUsageCount}
                         aiUsageLimit={aiUsageLimit}
                         analysis={scanResult.aiAnalysis}
+                        screenshots={lastScanScreenshots || scanResult.screenshots}
                         onUpgrade={handleUpgrade}
                       />
                       <FixRecommendations
                         recommendations={scanResult.recommendations || []}
-                        plan={plan}
-                        onUpgrade={handleUpgrade}
-                      />
-                      <Screenshots
-                        screenshots={lastScanScreenshots || scanResult.screenshots}
                         plan={plan}
                         onUpgrade={handleUpgrade}
                       />
