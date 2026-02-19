@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
 import DashboardHeader from './DashboardHeader';
 import ScoreHero from './ScoreHero';
 import ScoreBreakdown from './ScoreBreakdown';
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const authenticatedFetch = useAuthenticatedFetch();
 
   // Fetch dashboard data on mount
   useEffect(() => {
@@ -23,8 +25,7 @@ const Dashboard = () => {
 
   const loadDashboard = async () => {
     try {
-      const response = await fetch('/api/dashboard');
-      if (!response.ok) throw new Error('Failed to fetch dashboard');
+      const response = await authenticatedFetch('/api/dashboard');
       const data = await response.json();
       setDashboardData(data);
     } catch (error) {
@@ -37,13 +38,11 @@ const Dashboard = () => {
   const handleRunScan = async () => {
     setIsScanning(true);
     try {
-      const response = await fetch('/api/scan', {
+      const response = await authenticatedFetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      
-      if (!response.ok) throw new Error('Scan failed');
-      
+
       // Reload dashboard to get updated data
       await loadDashboard();
     } catch (error) {
