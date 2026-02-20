@@ -1,0 +1,36 @@
+# Shopify App Configuration
+# This file defines the app's metadata and configuration for Shopify
+
+scopes = "read_products,read_themes"
+
+webhooks_api_version = "2024-01"
+
+[[webhooks]]
+events = ["app/uninstalled"]
+uri = "/api/webhooks"
+
+[[webhooks]]
+events = ["app_subscriptions/update"]
+uri = "/api/webhooks"
+
+# Mandatory GDPR & Data Privacy Webhooks
+# Per Shopify privacy law compliance, these must be explicitly registered
+
+[[webhooks]]
+events = ["customers/data_request"]
+uri = "/api/webhooks"
+
+[[webhooks]]
+events = ["customers/redact"]
+uri = "/api/webhooks"
+
+[[webhooks]]
+events = ["shop/redact"]
+uri = "/api/webhooks"
+
+# Additional compliance topics
+compliance_topics = [
+  "customers/data_request",
+  "customers/redact",
+  "shop/redact"
+]
