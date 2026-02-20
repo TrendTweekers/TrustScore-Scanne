@@ -471,21 +471,46 @@ const { sendWeeklyReport } = require('../services/email');
 router.post('/monitoring/test-email', async (req, res) => {
     try {
         const session = res.locals.shopify.session;
-        const { score, trend } = req.body;
-        
-        // Fetch shop email
-        const client = new shopify.clients.Rest({ session });
-        const shopInfo = await client.get({ path: 'shop' });
-        const email = shopInfo.body.shop.email;
+        const shop = session.shop;
 
-        console.log(`[Monitoring] Sending test email to ${email} for ${session.shop}`);
-        
-        // Send report
-        await sendWeeklyReport(email, session.shop, score || 75, trend || 5);
-        
-        res.json({ success: true, message: `Test email sent to ${email}` });
+        // Get real score from DB
+        const history = await getScanHistory(shop);
+        const score = history.length > 0 ? history[0].score : 0;
+        const trend = history.length > 1 ? history[0].score - history[1].score : 0;
+
+        // Try to fetch shop email from Shopify API
+        let email = null;
+        try {
+            const { Shopify } = require('@shopify/shopify-api');
+            const client = new Shopify.Clients.Rest(shop, session.accessToken);
+            const shopInfo = await client.get({ path: 'shop' });
+            email = shopInfo.body?.shop?.email || null;
+        } catch (e) {
+            console.warn('[Monitoring] Could not fetch shop email, using fallback');
+        }
+
+        console.log(`[Monitoring] Sending test report to ${email || shop} | Score: ${score} | Trend: ${trend}`);
+        await sendWeeklyReport(email, shop, score, trend);
+
+        res.json({ success: true, sentTo: email || `${shop} (fallback)`, score, trend });
     } catch (error) {
         console.error("Failed to send test email:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/monitoring/next-report - returns the next scheduled report date
+router.get('/monitoring/next-report', async (req, res) => {
+    try {
+        const now = new Date();
+        // Find next Monday at 9:00 AM
+        const next = new Date(now);
+        const day = next.getDay(); // 0 = Sunday, 1 = Monday
+        const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7;
+        next.setDate(next.getDate() + daysUntilMonday);
+        next.setHours(9, 0, 0, 0);
+        res.json({ nextReport: next.toISOString() });
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });

@@ -80,9 +80,10 @@ async function takeScreenshots(url) {
     result.screenshots.desktop = desktopBuffer;
 
     // Take Mobile Screenshot
-    // await page.setViewport({ width: 375, height: 667, isMobile: true });
-    // const mobileBuffer = await page.screenshot({ encoding: 'base64', fullPage: false });
-    // result.screenshots.mobile = mobileBuffer;
+    await page.setViewport({ width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 });
+    await page.reload({ waitUntil: 'networkidle2' });
+    const mobileBuffer = await page.screenshot({ encoding: 'base64', fullPage: false });
+    result.screenshots.mobile = mobileBuffer;
 
   } catch (error) {
     console.error("Puppeteer error:", error);
