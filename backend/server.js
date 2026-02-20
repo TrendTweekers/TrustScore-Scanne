@@ -442,6 +442,31 @@ app.get('/admin/upgrade/:shop', async (req, res) => {
   }
 });
 
+// Alternative GET endpoint that's easier to test
+app.get('/admin/set-plan-get', async (req, res) => {
+  const { shop, plan } = req.query;
+
+  if (!shop || !plan) {
+    return res.status(400).json({ error: 'Missing shop or plan in query params' });
+  }
+
+  const validPlans = ['FREE', 'PRO', 'PLUS'];
+  const upperPlan = plan.toUpperCase();
+
+  if (!validPlans.includes(upperPlan)) {
+    return res.status(400).json({ error: `Invalid plan. Must be one of: ${validPlans.join(', ')}` });
+  }
+
+  try {
+    await setShopPlan(shop, upperPlan);
+    console.log(`✓ Admin: Set ${shop} to plan ${upperPlan}`);
+    res.json({ success: true, shop, newPlan: upperPlan });
+  } catch (error) {
+    console.error('Admin set-plan error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cookie Debug Middleware
 app.use((req, res, next) => {
   if (req.url.includes('/api/')) {
