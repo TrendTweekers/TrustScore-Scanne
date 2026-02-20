@@ -399,6 +399,57 @@ app.use('/api/*', (req, res, next) => {
 // Set up Shopify authentication and webhook handling
 // (Moved to top of middleware stack)
 
+app.use(express.json());
+app.use(shopify.cspHeaders()); // Ensure CSP headers are set
+
+// Admin endpoints MUST be before Shopify auth middleware
+// No auth required for development
+app.post('/admin/set-plan', async (req, res) => {
+  const { shop, plan } = req.body;
+
+  if (!shop || !plan) {
+    return res.status(400).json({ error: 'Missing shop or plan in request body' });
+  }
+
+  const validPlans = ['FREE', 'PRO', 'PLUS'];
+  const upperPlan = plan.toUpperCase();
+
+  if (!validPlans.includes(upperPlan)) {
+    return res.status(400).json({ error: `Invalid plan. Must be one of: ${validPlans.join(', ')}` });
+  }
+
+  try {
+    await setShopPlan(shop, upperPlan);
+    console.log(`✓ Admin: Set ${shop} to plan ${upperPlan}`);
+    res.json({ success: true, shop, newPlan: upperPlan });
+  } catch (error) {
+    console.error('Admin set-plan error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/admin/upgrade/:shop', async (req, res) => {
+  const { shop } = req.params;
+  try {
+    await adminUpgradeShop(shop);
+    console.log(`✓ Admin: Upgraded ${shop} to PRO`);
+    res.json({ success: true, shop, plan: 'PRO' });
+  } catch (error) {
+    console.error('Admin upgrade error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cookie Debug Middleware
+app.use((req, res, next) => {
+  if (req.url.includes('/api/')) {
+    console.log('[Cookie Debug] Path:', req.url);
+    console.log('[Cookie Debug] Cookies:', req.cookies);
+    console.log('[Cookie Debug] Headers cookie:', req.headers.cookie);
+  }
+  next();
+});
+
 // All /api/* requests (except auth/webhooks) must be authenticated
 app.use(['/api', '/api/*'], shopify.validateAuthenticatedSession());
 
@@ -408,19 +459,6 @@ app.use('/api/*', (req, res, next) => {
     console.log("Session VALID | shop:", res.locals.shopify.session.shop, "expires:", res.locals.shopify.session.expires);
   } else {
     console.log("Session MISSING or invalid in request");
-  }
-  next();
-});
-
-app.use(express.json());
-app.use(shopify.cspHeaders()); // Ensure CSP headers are set
-
-// Cookie Debug Middleware
-app.use((req, res, next) => {
-  if (req.url.includes('/api/')) {
-    console.log('[Cookie Debug] Path:', req.url);
-    console.log('[Cookie Debug] Cookies:', req.cookies);
-    console.log('[Cookie Debug] Headers cookie:', req.headers.cookie);
   }
   next();
 });
@@ -515,41 +553,6 @@ app.get('/admin/plan/:shop/:plan', async (req, res) => {
   try {
     await setShopPlan(shop, upperPlan);
     res.json({ success: true, shop, plan: upperPlan });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Admin endpoints - no auth required for development
-// WARNING: In production, add proper authentication/authorization
-app.get('/admin/upgrade/:shop', async (req, res) => {
-  const { shop } = req.params;
-  try {
-    await adminUpgradeShop(shop);
-    res.json({ success: true, shop, plan: 'PRO' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Simple admin endpoint for testing - set any plan
-app.post('/admin/set-plan', express.json(), async (req, res) => {
-  const { shop, plan } = req.body;
-
-  if (!shop || !plan) {
-    return res.status(400).json({ error: 'Missing shop or plan in request body' });
-  }
-
-  const validPlans = ['FREE', 'PRO', 'PLUS'];
-  const upperPlan = plan.toUpperCase();
-
-  if (!validPlans.includes(upperPlan)) {
-    return res.status(400).json({ error: `Invalid plan. Must be one of: ${validPlans.join(', ')}` });
-  }
-
-  try {
-    await setShopPlan(shop, upperPlan);
-    res.json({ success: true, shop, newPlan: upperPlan });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
