@@ -442,18 +442,21 @@ app.get('/api/session-status', (req, res) => {
   });
 });
 
-// ExitIframe route — tells Shopify Admin (parent frame) to redirect out of
-// the embedded iframe back into the app with shop + host so App Bridge can init
+// ExitIframe — breaks out of Shopify Admin iframe to start OAuth
+// redirectUrl goes to /api/auth so Shopify SDK handles the OAuth dance
 app.get('/exitiframe', (req, res) => {
   const shop = req.query.shop;
   const host = req.query.host;
+
+  if (!shop) return res.status(400).send('Missing shop');
+
   console.log(`[ExitIframe] shop=${shop} host=${host}`);
 
   const appHost = (process.env.HOST || '').replace(/\/$/, '');
-  const redirectUrl = `${appHost}/?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`;
-  const adminOrigin = 'https://admin.shopify.com';
+  const redirectUrl = `${appHost}/api/auth?shop=${encodeURIComponent(shop)}` +
+    (host ? `&host=${encodeURIComponent(host)}` : '');
 
-  res.setHeader('Content-Type', 'text/html');
+  res.set('Content-Type', 'text/html');
   res.send(`<!doctype html>
 <html>
   <head><meta charset="utf-8" /></head>
@@ -462,23 +465,26 @@ app.get('/exitiframe', (req, res) => {
       (function () {
         var redirectUrl = ${JSON.stringify(redirectUrl)};
 
-        // If we are NOT in an iframe, just navigate directly
-        if (window.top === window.self) {
-          window.location.assign(redirectUrl);
-          return;
-        }
+        // Use real parent origin when available, fall back to admin.shopify.com
+        var adminOrigin =
+          (window.location.ancestorOrigins &&
+           window.location.ancestorOrigins.length &&
+           window.location.ancestorOrigins[0]) ||
+          "https://admin.shopify.com";
 
-        // Tell Shopify Admin (parent frame) to redirect out of the iframe
-        var msg = JSON.stringify({
+        var payload = JSON.stringify({
           message: "Shopify.API.auth.exitIframe",
           data: { redirectUrl: redirectUrl }
         });
 
-        window.parent.postMessage(msg, ${JSON.stringify(adminOrigin)});
+        try {
+          window.parent.postMessage(payload, adminOrigin);
+        } catch (e) {}
 
-        // Fallback: if postMessage is blocked, force top-level navigation
+        // Fallback: escape iframe directly after short delay
         setTimeout(function () {
-          window.top.location.assign(redirectUrl);
+          try { window.top.location.assign(redirectUrl); }
+          catch (e) { window.location.assign(redirectUrl); }
         }, 800);
       })();
     </script>
