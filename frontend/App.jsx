@@ -1,6 +1,5 @@
 import React from 'react';
 import './styles/globals.css';
-import { Provider as AppBridgeProvider } from '@shopify/app-bridge-react';
 import Dashboard from './components/Dashboard';
 
 // Standalone notice for when app is opened outside Shopify admin
@@ -74,18 +73,11 @@ function App() {
     return <StandaloneNotice shop={shop} />;
   }
 
-  const config = {
-    apiKey: import.meta.env.VITE_SHOPIFY_API_KEY,
-    host: host,
-  };
+  console.log("App Bridge v4: host present, shop:", shop);
 
-  console.log("App Bridge config: host present, shop:", shop);
-
-  return (
-    <AppBridgeProvider config={config}>
-      <Dashboard />
-    </AppBridgeProvider>
-  );
+  // App Bridge v4: no Provider wrapper needed.
+  // Shopify Admin injects window.shopify automatically when the app is embedded.
+  return <Dashboard />;
 }
 
 export default App;

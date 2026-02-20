@@ -1,15 +1,21 @@
-import { useAppBridge } from '@shopify/app-bridge-react';
-import { getSessionToken } from '@shopify/app-bridge-utils';
 import { useCallback } from 'react';
 
+/**
+ * App Bridge v4 authenticated fetch hook.
+ *
+ * In v4, Shopify Admin injects window.shopify — no Provider or getSessionToken needed.
+ * Token is obtained via window.shopify.idToken().
+ */
 export function useAuthenticatedFetch() {
-  const app = useAppBridge();
   return useCallback(async (uri, options = {}) => {
-    const token = await getSessionToken(app);
+    // App Bridge v4: get session token from window.shopify
+    const token = await window.shopify.idToken();
+
     const headers = {
       ...options.headers,
       Authorization: `Bearer ${token}`,
     };
+
     const response = await fetch(uri, { ...options, headers });
 
     // Re-auth: redirect to exitiframe using the correct shop from URL params
@@ -32,5 +38,5 @@ export function useAuthenticatedFetch() {
     }
 
     return response;
-  }, [app]);
+  }, []);
 }
