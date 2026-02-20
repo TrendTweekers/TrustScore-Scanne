@@ -268,17 +268,36 @@ app.use((req, res, next) => {
 });
 
 // CSP Configuration
+// frame-ancestors must allow Shopify Admin to embed this app in an iframe.
+// The default helmet value ('self') blocks Shopify and shows:
+//   "Refused to frame ... because it violates CSP directive: frame-ancestors 'self'"
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://cloud.umami.is"],
-        connectSrc: ["'self'", "https://cloud.umami.is", "https://api.umami.is"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",               // required for App Bridge inline scripts
+          "https://cdn.shopify.com",        // App Bridge v4 CDN
+          "https://cloud.umami.is",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://cloud.umami.is",
+          "https://api.umami.is",
+        ],
         imgSrc: ["'self'", "data:", "https:"],
         styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+        frameAncestors: [
+          "https://*.myshopify.com",        // merchant storefronts
+          "https://admin.shopify.com",      // new unified Shopify Admin
+        ],
       },
     },
+    // helmet also sets X-Frame-Options by default; that header conflicts with
+    // frame-ancestors in modern browsers. Disable it so CSP takes sole control.
+    frameguard: false,
   })
 );
 
