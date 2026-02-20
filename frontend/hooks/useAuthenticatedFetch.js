@@ -6,18 +6,19 @@ import { useCallback } from 'react';
  * In v4, Shopify Admin injects window.shopify — no Provider or getSessionToken needed.
  * Token is obtained via window.shopify.idToken().
  *
- * Safety: checks window.shopify exists before calling, wraps in try-catch to
- * prevent unhandled promise rejections during the brief window before injection.
+ * On 401: App Bridge v4 manages token refresh automatically via the CDN script.
+ * We simply get a fresh token and retry once — no exitiframe redirect needed.
+ * (exitiframe + postMessage was a v3 pattern and causes "wrong origin" errors in v4.)
  */
 export function useAuthenticatedFetch() {
   return useCallback(async (uri, options = {}) => {
-    // Safety check: window.shopify must exist (injected by Shopify Admin)
+    // Safety check: window.shopify must be injected by Shopify Admin CDN script
     if (!window.shopify?.idToken) {
-      console.error('[useAuthenticatedFetch] window.shopify not ready — App Bridge v4 not injected yet');
+      console.error('[useAuthenticatedFetch] window.shopify not ready — is the app-bridge.js CDN script loaded?');
       throw new Error('Shopify bridge not ready');
     }
 
-    // App Bridge v4: get session token from window.shopify
+    // Get session token from App Bridge v4
     let token;
     try {
       token = await window.shopify.idToken();
@@ -38,18 +39,25 @@ export function useAuthenticatedFetch() {
 
     const response = await fetch(uri, { ...options, headers });
 
-    // Re-auth: redirect to exitiframe using the correct shop from URL params
-    // IMPORTANT: use relative URL so the request goes to the backend, not
-    // window.location.origin (which would be the Railway URL inside the iframe
-    // and cause a postMessage origin mismatch with admin.shopify.com)
+    // 401 handling in App Bridge v4:
+    // The CDN script handles session refresh — just get a new token and retry ONCE.
+    // DO NOT redirect to /exitiframe — that uses postMessage which requires the
+    // parent frame origin, causing "wrong origin" errors when ancestorOrigins
+    // isn't available or returns the Railway URL instead of admin.shopify.com.
     if (response.status === 401 || response.headers.get('X-Shopify-API-Request-Failure-Reauthorize') === '1') {
-      const params = new URLSearchParams(window.location.search);
-      const shop = params.get('shop') || '';
-      const host = params.get('host') || '';
-      console.log('[useAuthenticatedFetch] 401 - redirecting to exitiframe for shop:', shop);
-      // Relative URL — backend serves this, postMessage is handled server-side
-      window.location.href = `/exitiframe?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`;
-      return new Promise(() => {});
+      console.log('[useAuthenticatedFetch] 401 — refreshing token and retrying once');
+      try {
+        const freshToken = await window.shopify.idToken();
+        const retryHeaders = { ...options.headers, Authorization: `Bearer ${freshToken}` };
+        const retryResponse = await fetch(uri, { ...options, headers: retryHeaders });
+        if (retryResponse.ok) return retryResponse;
+        // Still failing after refresh — throw so callers can handle it
+        console.error('[useAuthenticatedFetch] Still 401 after token refresh:', retryResponse.status);
+        throw new Error(`Authentication failed (${retryResponse.status})`);
+      } catch (err) {
+        console.error('[useAuthenticatedFetch] Token refresh failed:', err);
+        throw err;
+      }
     }
 
     if (!response.ok) {
