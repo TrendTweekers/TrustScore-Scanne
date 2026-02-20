@@ -256,6 +256,10 @@ const Dashboard = () => {
   };
 
   const handleUpgrade = async (planKey = 'PRO') => {
+    // Guard: when used directly as onClick, browser passes the Event object as the first arg.
+    // Detect that and fall back to 'PRO'.
+    if (!planKey || typeof planKey !== 'string') planKey = 'PRO';
+
     try {
       const response = await authenticatedFetch('/api/billing/subscribe', {
         method: 'POST',
