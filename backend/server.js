@@ -735,14 +735,18 @@ app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/privacy.html'));
 });
 
-// Serve frontend
+// ─── Embedded App Frontend Serving ──────────────────────────────────
+// For embedded apps: always serve index.html regardless of shop param
+// App Bridge handles auth on the client side
+// This allows the app to load in the Shopify admin iframe
+
+// Serve frontend static assets (css, js, etc)
 app.use(serveStatic(FRONTEND_PATH, { index: false }));
 
-app.use('/*', shopify.ensureInstalledOnShop(), async (req, res) => {
-  return res
-    .status(200)
-    .set('Content-Type', 'text/html')
-    .sendFile(path.join(FRONTEND_PATH, 'index.html'));
+// Catch-all: serve index.html for any unmatched route
+// This allows client-side routing to work (SPA behavior)
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
 });
 
 app.listen(PORT, () => {
