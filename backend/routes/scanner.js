@@ -1,7 +1,7 @@
 const express = require('express');
 const { takeScreenshots } = require('../services/puppeteer.js');
 const { calculateTrustScore } = require('../services/scoring.js');
-const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount, updateShopRevenue, incrementAIUsage, resetAIUsage, normalizeShop } = require('../db.js');
+const { getShop, getScanCount, saveScan, getScanHistory, getScansForChart, saveCompetitorScan, getCompetitorScans, getCompetitorScanCount, updateShopRevenue, incrementAIUsage, resetAIUsage, normalizeShop, updateReviewRequested, incrementReviewDismissed, markHasReviewed } = require('../db.js');
 const { analyzeStoreWithAI } = require('../services/claude.js');
 const { sendScoreDropAlert } = require('../services/email.js');
 const { checkBillingMiddleware } = require('../middleware/billing.js');
@@ -294,6 +294,10 @@ router.get('/dashboard', async (req, res) => {
       history: history.slice(0, 5), // Return last 5 scans for dashboard
       scanCount: history.length,
       aiUsage: shopData?.ai_usage_count || 0,
+      // Review request tracking fields
+      reviewRequestedAt: shopData?.review_requested_at || null,
+      reviewDismissedCount: shopData?.review_dismissed_count || 0,
+      hasReviewed: shopData?.has_reviewed === 1,
       shopData // Return full data just in case
     });
   } catch (error) {
@@ -510,6 +514,41 @@ router.get('/monitoring/next-report', async (req, res) => {
         next.setDate(next.getDate() + daysUntilMonday);
         next.setHours(9, 0, 0, 0);
         res.json({ nextReport: next.toISOString() });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Review Tracking Routes ---
+
+// POST /api/review/requested - log that we showed the modal
+router.post('/review/requested', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        await updateReviewRequested(session.shop);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/review/dismissed - user clicked "Maybe Later"
+router.post('/review/dismissed', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        await incrementReviewDismissed(session.shop);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/review/completed - user clicked "Leave a Review"
+router.post('/review/completed', async (req, res) => {
+    try {
+        const session = res.locals.shopify.session;
+        await markHasReviewed(session.shop);
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

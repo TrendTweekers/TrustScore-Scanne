@@ -12,6 +12,7 @@ import CredibilityCard from './CredibilityCard';
 import RecentScans from './RecentScans';
 import CompetitorView from './CompetitorView';
 import HelpFAQ from './HelpFAQ';
+import ReviewRequestModal from './ReviewRequestModal';
 
 // ─── Utility components ────────────────────────────────────────────────
 
@@ -112,8 +113,10 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [scanError, setScanError] = useState(null);
   const [lastScanScreenshots, setLastScanScreenshots] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const authenticatedFetch = useAuthenticatedFetch();
   const progressRef = useRef(null);
+  const reviewCheckedRef = useRef(false);
 
   useEffect(() => {
     loadDashboard();
@@ -140,12 +143,75 @@ const Dashboard = () => {
           setLastScanScreenshots(result.screenshots);
         }
       }
+
+      // Check if we should show the review modal (only once per load)
+      if (!reviewCheckedRef.current) {
+        reviewCheckedRef.current = true;
+        checkReviewTrigger(data);
+      }
     } catch (err) {
       console.error('Failed to load dashboard:', err);
       setError(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkReviewTrigger = (data) => {
+    if (!data) return;
+
+    const scanCount = data.scanCount || 0;
+    const hasReviewed = data.hasReviewed;
+    const dismissedCount = data.reviewDismissedCount || 0;
+    const lastRequested = data.reviewRequestedAt ? new Date(data.reviewRequestedAt) : null;
+    const history = data.history || [];
+
+    // Don't show if: already reviewed, dismissed 2+ times
+    if (hasReviewed || dismissedCount >= 2) return;
+
+    // Don't show if asked within the last 30 days
+    if (lastRequested) {
+      const daysSince = (Date.now() - lastRequested.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince < 30) return;
+    }
+
+    // Calculate score improvement (first scan vs latest)
+    let scoreImprovement = 0;
+    if (history.length >= 2) {
+      const latestScore = history[0].score;
+      const firstScore = history[history.length - 1].score;
+      scoreImprovement = latestScore - firstScore;
+    }
+
+    // Primary trigger: 3+ scans AND score improved 10+ points
+    const primaryTrigger = scanCount >= 3 && scoreImprovement >= 10;
+
+    // Alternative trigger: 5+ scans (value delivered even without improvement)
+    const alternativeTrigger = scanCount >= 5;
+
+    if (primaryTrigger || alternativeTrigger) {
+      // Small delay so dashboard fully loads first
+      setTimeout(async () => {
+        setShowReviewModal(true);
+        try {
+          await authenticatedFetch('/api/review/requested', { method: 'POST' });
+        } catch (e) { /* silent */ }
+      }, 2000);
+    }
+  };
+
+  const handleReviewClick = async () => {
+    setShowReviewModal(false);
+    try {
+      await authenticatedFetch('/api/review/completed', { method: 'POST' });
+    } catch (e) { /* silent */ }
+  };
+
+  const handleReviewDismiss = async () => {
+    setShowReviewModal(false);
+    try {
+      await authenticatedFetch('/api/review/dismissed', { method: 'POST' });
+    } catch (e) { /* silent */ }
   };
 
   const handleRunScan = async () => {
@@ -377,6 +443,22 @@ const Dashboard = () => {
           <HelpFAQ />
         )}
       </div>
+
+      {/* ═══════ Review Request Modal ═══════ */}
+      {showReviewModal && (() => {
+        const history = dashboardData?.history || [];
+        const currentScore = history[0]?.score || 0;
+        const firstScore = history.length >= 2 ? history[history.length - 1].score : currentScore;
+        const scoreImprovement = currentScore - firstScore;
+        return (
+          <ReviewRequestModal
+            currentScore={currentScore}
+            scoreImprovement={scoreImprovement}
+            onReview={handleReviewClick}
+            onDismiss={handleReviewDismiss}
+          />
+        );
+      })()}
     </div>
   );
 };

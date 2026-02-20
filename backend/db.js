@@ -55,7 +55,10 @@ db.serialize(() => {
         { name: 'access_token', query: "ALTER TABLE shops ADD COLUMN access_token TEXT" },
         { name: 'accessToken', query: "ALTER TABLE shops ADD COLUMN accessToken TEXT" },
         { name: 'plan', query: "ALTER TABLE shops ADD COLUMN plan TEXT DEFAULT 'FREE'" },
-        { name: 'scan_count', query: "ALTER TABLE shops ADD COLUMN scan_count INTEGER DEFAULT 0" }
+        { name: 'scan_count', query: "ALTER TABLE shops ADD COLUMN scan_count INTEGER DEFAULT 0" },
+        { name: 'review_requested_at', query: "ALTER TABLE shops ADD COLUMN review_requested_at DATETIME" },
+        { name: 'review_dismissed_count', query: "ALTER TABLE shops ADD COLUMN review_dismissed_count INTEGER DEFAULT 0" },
+        { name: 'has_reviewed', query: "ALTER TABLE shops ADD COLUMN has_reviewed INTEGER DEFAULT 0" }
       ];
 
       migrations.forEach(migration => {
@@ -242,6 +245,39 @@ const getAllShops = () => {
   });
 };
 
+const updateReviewRequested = (shop) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE shops SET review_requested_at = datetime('now') WHERE shop = ?`,
+      [shop], function(err) {
+        if (err) reject(err); else resolve(this);
+      }
+    );
+  });
+};
+
+const incrementReviewDismissed = (shop) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE shops SET review_dismissed_count = COALESCE(review_dismissed_count, 0) + 1 WHERE shop = ?`,
+      [shop], function(err) {
+        if (err) reject(err); else resolve(this);
+      }
+    );
+  });
+};
+
+const markHasReviewed = (shop) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE shops SET has_reviewed = 1 WHERE shop = ?`,
+      [shop], function(err) {
+        if (err) reject(err); else resolve(this);
+      }
+    );
+  });
+};
+
 module.exports = {
   createOrUpdateShop,
   getShop,
@@ -260,5 +296,8 @@ module.exports = {
   adminUpgradeShop,
   setShopPlan,
   normalizeShop,
+  updateReviewRequested,
+  incrementReviewDismissed,
+  markHasReviewed,
   db
 };
