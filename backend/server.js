@@ -404,6 +404,12 @@ app.use('/api/*', (req, res, next) => {
 
 app.use(shopify.cspHeaders()); // Ensure CSP headers are set
 
+// ADMIN ENDPOINTS - Test endpoint first
+app.all('/admin/test', (req, res) => {
+  console.log('✓ /admin/test endpoint reached!');
+  res.json({ message: 'Admin endpoint is working!', method: req.method });
+});
+
 // Admin endpoints MUST be before Shopify auth middleware
 // No auth required for development
 app.post('/admin/set-plan', async (req, res) => {
