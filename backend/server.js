@@ -255,6 +255,12 @@ const app = express();
 app.set('trust proxy', 1); // Required for Railway/Heroku to trust the proxy and set secure cookies
 console.log('Trust proxy set to 1');
 
+// ─── ASSETS: served first, before ANY auth or middleware ─────────────
+// Must come before ensureInstalledOnShop() and before the catch-all route.
+// If this is placed after auth middleware, Shopify admin will load HTML
+// but JS/CSS requests will get redirected → blank skeleton forever.
+app.use('/assets', express.static(path.join(FRONTEND_PATH, 'assets')));
+
 // 1. Raw Request Logger (Must be first)
 app.use((req, res, next) => {
   console.log(`[RAW REQUEST] ${req.method} ${req.path}`);
