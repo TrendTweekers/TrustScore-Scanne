@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './styles/globals.css';
 import Dashboard from './components/Dashboard';
 
@@ -62,6 +62,40 @@ function StandaloneNotice({ shop }) {
   );
 }
 
+// Loading spinner shown while waiting for window.shopify to be injected
+function ShopifyBridgeLoader() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f9fafb',
+    }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '16px',
+        color: '#6b7280',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: '14px',
+      }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          border: '3px solid #e5e7eb',
+          borderTopColor: '#0071e3',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <span>Connecting to Shopify...</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const params = new URLSearchParams(window.location.search);
   const host = params.get('host');
@@ -73,10 +107,45 @@ function App() {
     return <StandaloneNotice shop={shop} />;
   }
 
-  console.log("App Bridge v4: host present, shop:", shop);
+  return <EmbeddedApp shop={shop} />;
+}
 
-  // App Bridge v4: no Provider wrapper needed.
-  // Shopify Admin injects window.shopify automatically when the app is embedded.
+// Separate component so hooks work cleanly (no conditional hook calls)
+function EmbeddedApp({ shop }) {
+  const [shopifyReady, setShopifyReady] = useState(() => !!window.shopify);
+
+  useEffect(() => {
+    // Already available — nothing to do
+    if (window.shopify) {
+      setShopifyReady(true);
+      return;
+    }
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50; // 5 seconds max (50 × 100ms)
+
+    const timer = setInterval(() => {
+      attempts++;
+      if (window.shopify) {
+        console.log('[App] window.shopify ready after', attempts * 100, 'ms');
+        setShopifyReady(true);
+        clearInterval(timer);
+      } else if (attempts >= MAX_ATTEMPTS) {
+        // After 5s still not ready — log and stop polling
+        // (App will stay on loader; avoids infinite reload loops)
+        console.warn('[App] window.shopify not available after 5s — is this app embedded in Shopify Admin?');
+        clearInterval(timer);
+      }
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!shopifyReady) {
+    return <ShopifyBridgeLoader />;
+  }
+
+  console.log('[App] App Bridge v4 ready, shop:', shop);
   return <Dashboard />;
 }
 
