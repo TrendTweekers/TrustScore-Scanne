@@ -75,13 +75,11 @@ function App() {
   }
 
   const config = {
-    apiKey: import.meta.env.VITE_SHOPIFY_API_KEY || 'REPLACE_WITH_API_KEY',
+    apiKey: import.meta.env.VITE_SHOPIFY_API_KEY,
     host: host,
-    forceRedirect: true,
   };
 
-  console.log("App Bridge config:", { ...config, apiKey: '***' });
-  console.log("Shop:", shop);
+  console.log("App Bridge config: host present, shop:", shop);
 
   return (
     <AppBridgeProvider config={config}>
