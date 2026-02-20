@@ -520,11 +520,36 @@ app.get('/admin/plan/:shop/:plan', async (req, res) => {
   }
 });
 
+// Admin endpoints - no auth required for development
+// WARNING: In production, add proper authentication/authorization
 app.get('/admin/upgrade/:shop', async (req, res) => {
   const { shop } = req.params;
   try {
     await adminUpgradeShop(shop);
     res.json({ success: true, shop, plan: 'PRO' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Simple admin endpoint for testing - set any plan
+app.post('/admin/set-plan', express.json(), async (req, res) => {
+  const { shop, plan } = req.body;
+
+  if (!shop || !plan) {
+    return res.status(400).json({ error: 'Missing shop or plan in request body' });
+  }
+
+  const validPlans = ['FREE', 'PRO', 'PLUS'];
+  const upperPlan = plan.toUpperCase();
+
+  if (!validPlans.includes(upperPlan)) {
+    return res.status(400).json({ error: `Invalid plan. Must be one of: ${validPlans.join(', ')}` });
+  }
+
+  try {
+    await setShopPlan(shop, upperPlan);
+    res.json({ success: true, shop, newPlan: upperPlan });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
