@@ -28,7 +28,7 @@ const ScoreBreakdown = ({ breakdown = [] }) => {
               ) : (
                 <XCircle className="w-4 h-4 text-destructive" />
               )}
-              <span className="text-sm">{item.label}</span>
+              <span className="text-sm">{item.label || item.category}</span>
             </div>
             <span className="text-sm text-muted-foreground">
               {item.points}/{item.maxPoints} points
