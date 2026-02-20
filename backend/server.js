@@ -725,6 +725,14 @@ app.get('/admin/plan/:shop/:plan', async (req, res) => {
   }
 });
 
+// ─── Public Policy Pages ────────────────────────────────────────────
+// These are public, unprotected routes for legal/compliance pages
+
+// Privacy Policy (no auth required — needed for App Store listing)
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/privacy.html'));
+});
+
 // Serve frontend
 app.use(serveStatic(FRONTEND_PATH, { index: false }));
 
