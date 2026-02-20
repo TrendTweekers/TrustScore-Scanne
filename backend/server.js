@@ -179,6 +179,7 @@ const getPlanCode = (name) => {
 };
 
 const webhookHandlers = {
+  // Billing: keep plan in sync when merchant changes/cancels subscription
   APP_SUBSCRIPTIONS_UPDATE: {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: '/api/webhooks',
@@ -186,11 +187,64 @@ const webhookHandlers = {
       const payload = JSON.parse(body);
       console.log('Received subscription update:', payload);
       const subscription = payload.app_subscription;
-      const planCode = (subscription && subscription.status === 'ACTIVE') 
-        ? getPlanCode(subscription.name) 
+      const planCode = (subscription && subscription.status === 'ACTIVE')
+        ? getPlanCode(subscription.name)
         : 'FREE';
       console.log(`Updating ${shop} to plan ${planCode}`);
       await updateShopPlan(shop, planCode);
+    },
+  },
+
+  // ── Mandatory App Store webhooks ─────────────────────────────────────
+
+  // 1. app/uninstalled — mark shop inactive so we stop processing it
+  APP_UNINSTALLED: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: '/api/webhooks',
+    callback: async (topic, shop, body) => {
+      console.log(`[Webhook] App uninstalled from ${shop}`);
+      await new Promise((resolve, reject) => {
+        db.run(
+          'UPDATE shops SET isActive = 0 WHERE shop = ?',
+          [shop],
+          (err) => err ? reject(err) : resolve()
+        );
+      });
+      console.log(`[Webhook] Marked ${shop} as inactive`);
+    },
+  },
+
+  // 2. customers/data_request (GDPR) — we don't store customer PII
+  CUSTOMERS_DATA_REQUEST: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: '/api/webhooks',
+    callback: async (topic, shop, body) => {
+      console.log(`[Webhook] GDPR customers/data_request from ${shop} — no customer PII stored`);
+    },
+  },
+
+  // 3. customers/redact (GDPR) — we don't store customer PII
+  CUSTOMERS_REDACT: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: '/api/webhooks',
+    callback: async (topic, shop, body) => {
+      console.log(`[Webhook] GDPR customers/redact from ${shop} — no customer PII stored`);
+    },
+  },
+
+  // 4. shop/redact (GDPR) — delete all data for this shop
+  SHOP_REDACT: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: '/api/webhooks',
+    callback: async (topic, shop, body) => {
+      console.log(`[Webhook] GDPR shop/redact — deleting all data for ${shop}`);
+      await new Promise((resolve, reject) => {
+        db.run('DELETE FROM scans WHERE shop = ?', [shop], (err) => err ? reject(err) : resolve());
+      });
+      await new Promise((resolve, reject) => {
+        db.run('DELETE FROM shops WHERE shop = ?', [shop], (err) => err ? reject(err) : resolve());
+      });
+      console.log(`[Webhook] All data deleted for ${shop}`);
     },
   },
 };
@@ -330,9 +384,25 @@ app.get(
          });
       }
       
+      // 5. Register webhooks with Shopify now that we have a valid session
+      try {
+        const registerResponse = await shopify.api.webhooks.register({ session });
+        console.log("[Webhooks] Registration results:", JSON.stringify(
+          Object.fromEntries(
+            Object.entries(registerResponse).map(([topic, results]) => [
+              topic,
+              results.map(r => ({ success: r.success, result: r.result }))
+            ])
+          )
+        ));
+      } catch (webhookErr) {
+        // Non-fatal: app still works, webhooks can be re-registered on next install
+        console.error("[Webhooks] Registration failed (non-fatal):", webhookErr.message);
+      }
+
       console.log("OAuth completed successfully. Redirecting to app...");
-      
-      // 5. Redirect to App
+
+      // 6. Redirect to App
       // Include host for App Bridge
       const redirectUrl = `/?shop=${shop}&host=${host}`;
       return res.redirect(redirectUrl);
