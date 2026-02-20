@@ -150,8 +150,18 @@ const Dashboard = () => {
   const loadDashboard = async () => {
     setError(null);
     try {
+      console.log('[Dashboard] loadDashboard() called');
       const response = await authenticatedFetch('/api/dashboard');
+      console.log('[Dashboard] /api/dashboard response status:', response.status);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[Dashboard] API error body:', text);
+        throw new Error(`API ${response.status}: ${text.slice(0, 200)}`);
+      }
+
       const data = await response.json();
+      console.log('[Dashboard] data received, keys:', Object.keys(data || {}));
       setDashboardData(data);
 
       // Extract screenshots from most recent scan result
@@ -169,7 +179,8 @@ const Dashboard = () => {
         checkReviewTrigger(data);
       }
     } catch (err) {
-      console.error('Failed to load dashboard:', err);
+      console.error('[Dashboard] loadDashboard failed:', err.message);
+      console.error('[Dashboard] stack:', err.stack);
       setError(err);
     } finally {
       setLoading(false);
