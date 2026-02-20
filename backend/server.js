@@ -388,6 +388,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Parse JSON EARLY - needed for POST body parsing
+app.use(express.json());
+
 // Fallback: Ensure shop domain header is present for Shopify middleware
 app.use('/api/*', (req, res, next) => {
   if (!req.headers['x-shopify-shop-domain']) {
@@ -399,7 +402,6 @@ app.use('/api/*', (req, res, next) => {
 // Set up Shopify authentication and webhook handling
 // (Moved to top of middleware stack)
 
-app.use(express.json());
 app.use(shopify.cspHeaders()); // Ensure CSP headers are set
 
 // Admin endpoints MUST be before Shopify auth middleware
