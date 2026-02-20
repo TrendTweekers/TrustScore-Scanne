@@ -120,17 +120,26 @@ const Dashboard = () => {
   const progressRef = useRef(null);
   const reviewCheckedRef = useRef(false);
 
+  // Initial load — empty deps so this fires exactly once on mount.
+  // loadDashboard is defined below but that's fine: the useEffect callback
+  // runs after the component body has fully executed, so loadDashboard is
+  // always defined by the time it runs. Do NOT put loadDashboard or
+  // trackEvent in the dep array — either causes infinite re-runs.
   useEffect(() => {
+    console.log('✅ Dashboard mounted, window.shopify:', !!window.shopify);
+    console.log('📡 Calling /api/dashboard...');
     loadDashboard();
     trackEvent('dashboard_loaded');
-  }, [trackEvent]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — one-time mount effect
 
-  // Track tab changes
+  // Track tab changes (only after initial mount)
+  const isFirstTabRender = useRef(true);
   useEffect(() => {
-    if (activeTab !== 'dashboard') {
-      trackEvent(`tab_changed_to_${activeTab}`);
-    }
-  }, [activeTab, trackEvent]);
+    if (isFirstTabRender.current) { isFirstTabRender.current = false; return; }
+    trackEvent(`tab_changed_to_${activeTab}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // trackEvent is a stable no-op; omitting from deps is safe
 
   useEffect(() => {
     return () => {
