@@ -297,8 +297,8 @@ app.get(
 app.get(
   shopify.config.auth.callbackPath,
   async (req, res) => {
-    console.log("=== CUSTOM /api/auth/callback HIT ===");
-    console.log("Query params:", req.query);
+    console.log("=== /api/auth/callback HIT ===");
+    console.log("Query params:", { shop: req.query.shop, code: !!req.query.code, state: req.query.state, host: req.query.host, hmac: !!req.query.hmac });
     const { shop, code, state, host, hmac } = req.query;
 
     if (!shop || !code || !hmac) {
@@ -386,18 +386,17 @@ app.get(
       
       // 5. Register webhooks with Shopify now that we have a valid session
       try {
+        console.log(`[Webhooks] Starting registration for shop: ${shop}`);
         const registerResponse = await shopify.api.webhooks.register({ session });
-        console.log("[Webhooks] Registration results:", JSON.stringify(
-          Object.fromEntries(
-            Object.entries(registerResponse).map(([topic, results]) => [
-              topic,
-              results.map(r => ({ success: r.success, result: r.result }))
-            ])
-          )
-        ));
+        const successCount = Object.entries(registerResponse).reduce((acc, [topic, results]) => {
+          const topicSuccess = results.filter(r => r.success).length;
+          console.log(`[Webhooks] Topic "${topic}": ${topicSuccess}/${results.length} registered`);
+          return acc + topicSuccess;
+        }, 0);
+        console.log(`[Webhooks] ✓ Registered ${successCount} webhook handlers total for ${shop}`);
       } catch (webhookErr) {
         // Non-fatal: app still works, webhooks can be re-registered on next install
-        console.error("[Webhooks] Registration failed (non-fatal):", webhookErr.message);
+        console.error(`[Webhooks] ✗ Registration failed (non-fatal) for ${shop}:`, webhookErr.message);
       }
 
       console.log("OAuth completed successfully. Redirecting to app...");
@@ -414,9 +413,18 @@ app.get(
   }
 );
 
-// 3. Webhooks (Must be before body parsers)
+// 3. Webhooks (Must be before express.json() and uses raw body for HMAC verification)
+// expressraw() ensures the body is NOT parsed before HMAC verification
 app.post(
   shopify.config.webhooks.path,
+  express.raw({ type: 'application/json' }),
+  async (req, res, next) => {
+    // Log webhook receipt with topic
+    const topic = req.get('x-shopify-topic') || req.get('X-Shopify-Topic') || 'unknown';
+    const shop = req.get('x-shopify-shop-domain') || req.get('X-Shopify-Shop-Domain') || 'unknown';
+    console.log(`[Webhook] Received: topic="${topic}" shop="${shop}"`);
+    next();
+  },
   shopify.processWebhooks({ webhookHandlers })
 );
 
