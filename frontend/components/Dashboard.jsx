@@ -255,12 +255,24 @@ const Dashboard = () => {
     }
   };
 
-  const handleUpgrade = () => {
-    // Redirect to Shopify billing / pricing page
-    const shopDomain = new URLSearchParams(window.location.search).get('shop') || '';
-    const storeName = shopDomain.replace('.myshopify.com', '');
-    if (storeName) {
-      window.top.location.href = `https://admin.shopify.com/store/${storeName}/charges/trustscore-scanner/pricing_plans`;
+  const handleUpgrade = async (planKey = 'PRO') => {
+    try {
+      const response = await authenticatedFetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey }),
+      });
+
+      const data = await response.json();
+
+      if (data.confirmationUrl) {
+        // Break out of the iframe and go to Shopify billing approval page
+        window.top.location.href = data.confirmationUrl;
+      } else {
+        console.error('Billing error: no confirmationUrl returned', data);
+      }
+    } catch (error) {
+      console.error('Billing error:', error);
     }
   };
 

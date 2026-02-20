@@ -499,26 +499,30 @@ app.use('/api/*', (req, res, next) => {
 // API Routes
 app.use('/api', scannerRoutes);
 
-// Billing Route
-const handleBillingRequest = async (req, res) => {
+// ─── Billing Routes ────────────────────────────────────────────────────────
+
+// POST /api/billing/subscribe — called by frontend "Upgrade" button
+// Body: { plan: "PRO" | "PLUS" }  →  returns { confirmationUrl }
+app.post('/api/billing/subscribe', async (req, res) => {
   try {
     const session = res.locals.shopify.session;
-    const plan = req.query.plan;
-    
-    console.log("=== BILLING SUBSCRIBE HIT (MANUAL GRAPHQL) ===");
-    console.log("Plan:", plan);
-    console.log("Shop:", session?.shop);
+    const planKey = (req.body?.plan || req.query?.plan || 'PRO').toUpperCase();
 
-    if (!BILLING_PLANS[plan]) {
-        return res.status(400).json({ error: 'Invalid plan' });
+    console.log("=== BILLING SUBSCRIBE ===");
+    console.log("Plan:", planKey, "| Shop:", session?.shop);
+
+    if (!BILLING_PLANS[planKey]) {
+      return res.status(400).json({ error: `Invalid plan "${planKey}". Must be PRO or PLUS.` });
     }
 
-    const planConfig = BILLING_PLANS[plan];
-    const returnUrl = `${process.env.HOST}/?shop=${session.shop}&billing=success`;
-    
-    // Manual GraphQL mutation to create charge
+    const planConfig = BILLING_PLANS[planKey];
+    const host = (process.env.HOST || '').replace(/\/$/, '');
+
+    // Callback carries shop + plan so we know what to activate after approval
+    const returnUrl = `${host}/api/billing/callback?shop=${session.shop}&plan=${planKey}`;
+
     const client = new shopify.api.clients.Graphql({ session });
-    
+
     const mutation = `
       mutation CreateCharge($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
         appSubscriptionCreate(
@@ -534,47 +538,80 @@ const handleBillingRequest = async (req, res) => {
           returnUrl: $returnUrl
           test: $test
         ) {
-          appSubscription {
-            id
-          }
+          appSubscription { id }
           confirmationUrl
-          userErrors {
-            field
-            message
-          }
+          userErrors { field message }
         }
       }
     `;
-    
-    const response = await client.query({
+
+    const gqlRes = await client.query({
       data: {
         query: mutation,
         variables: {
           name: planConfig.label,
           price: { amount: planConfig.amount, currencyCode: planConfig.currencyCode },
-          returnUrl: returnUrl,
+          returnUrl,
           test: process.env.NODE_ENV !== 'production'
         }
       }
     });
-    
-    const { confirmationUrl, userErrors } = response.body.data.appSubscriptionCreate;
-    
-    if (userErrors.length > 0) {
+
+    const { confirmationUrl, userErrors } = gqlRes.body.data.appSubscriptionCreate;
+
+    if (userErrors?.length > 0) {
       throw new Error(userErrors[0].message);
     }
-    
-    console.log("Billing request successful. Confirmation URL:", confirmationUrl);
+
+    console.log("Billing charge created. Confirmation URL:", confirmationUrl);
     res.json({ confirmationUrl });
-    
+
   } catch (error) {
-    console.error("Billing error:", error);
+    console.error("Billing subscribe error:", error);
     res.status(500).json({ error: error.message });
   }
-};
+});
 
-app.get('/api/billing/upgrade', handleBillingRequest);
-app.get('/api/billing/subscribe', handleBillingRequest);
+// GET /api/billing/callback — Shopify redirects here after merchant approves charge
+// Updates shop plan in DB, then redirects back into the embedded app
+app.get('/api/billing/callback', async (req, res) => {
+  try {
+    const { shop, plan, charge_id } = req.query;
+
+    console.log("=== BILLING CALLBACK ===");
+    console.log("Shop:", shop, "| Plan:", plan, "| Charge ID:", charge_id);
+
+    if (!shop || !plan) {
+      return res.status(400).send('Missing shop or plan in callback');
+    }
+
+    const planKey = plan.toUpperCase();
+    if (!['PRO', 'PLUS'].includes(planKey)) {
+      return res.status(400).send(`Invalid plan: ${planKey}`);
+    }
+
+    // Activate the plan in our DB
+    await setShopPlan(shop, planKey);
+    console.log(`✓ Plan activated: ${shop} → ${planKey}`);
+
+    // Send merchant back into embedded app
+    const storeName = shop.replace('.myshopify.com', '');
+    const appHandle = process.env.SHOPIFY_APP_HANDLE || 'trustscore-scanner';
+    const redirectUrl = `https://admin.shopify.com/store/${storeName}/apps/${appHandle}?billing=success&plan=${planKey}`;
+
+    console.log("Redirecting back to app:", redirectUrl);
+    res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error("Billing callback error:", error);
+    res.status(500).send('Billing confirmation failed: ' + error.message);
+  }
+});
+
+// Legacy GET alias — keep for backwards compat
+app.get('/api/billing/upgrade', async (req, res) => {
+  res.redirect(307, `/api/billing/subscribe?plan=${req.query.plan || 'PRO'}`);
+});
 
 app.get('/admin/plan/:shop/:plan', async (req, res) => {
   const { shop, plan } = req.params;
