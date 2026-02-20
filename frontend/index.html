@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard – TrustScore</title>
     <link rel="icon" type="image/svg+xml" href="/assets/trustscore-logo.svg" />
-    <script 
-      defer 
-      src="https://cloud.umami.is/script.js" 
-      data-website-id="52bac8a6-c9da-4f6d-a8d2-6ba66efb14fc" 
+
+    <!-- App Bridge v4: MUST be before any app JS. Injects window.shopify. -->
+    <meta name="shopify-api-key" content="%VITE_SHOPIFY_API_KEY%" />
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+
+    <!-- Umami analytics -->
+    <script
+      defer
+      src="https://cloud.umami.is/script.js"
+      data-website-id="52bac8a6-c9da-4f6d-a8d2-6ba66efb14fc"
       data-auto-track="true">
     </script>
     <script>
