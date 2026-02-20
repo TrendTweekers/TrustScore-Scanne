@@ -523,6 +523,8 @@ app.post('/api/billing/subscribe', async (req, res) => {
 
     const client = new shopify.api.clients.Graphql({ session });
 
+    const isTestCharge = process.env.SHOPIFY_TEST_BILLING === 'true' || process.env.NODE_ENV !== 'production';
+
     const mutation = `
       mutation CreateCharge($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
         appSubscriptionCreate(
@@ -545,22 +547,47 @@ app.post('/api/billing/subscribe', async (req, res) => {
       }
     `;
 
-    const gqlRes = await client.query({
-      data: {
-        query: mutation,
-        variables: {
-          name: planConfig.label,
-          price: { amount: planConfig.amount, currencyCode: planConfig.currencyCode },
-          returnUrl,
-          test: process.env.NODE_ENV !== 'production'
-        }
-      }
-    });
+    const variables = {
+      name: planConfig.label,
+      price: { amount: planConfig.amount, currencyCode: planConfig.currencyCode },
+      returnUrl,
+      test: isTestCharge
+    };
 
-    const { confirmationUrl, userErrors } = gqlRes.body.data.appSubscriptionCreate;
+    console.log("Billing variables:", JSON.stringify({ ...variables, test: isTestCharge }));
+
+    // shopify-api v11 uses client.request(); v9/v10 uses client.query()
+    // Support both shapes so it works regardless of exact version
+    let gqlRes;
+    if (typeof client.request === 'function') {
+      // v11+ style
+      gqlRes = await client.request(mutation, { variables });
+    } else {
+      // v9/v10 style
+      gqlRes = await client.query({ data: { query: mutation, variables } });
+    }
+
+    console.log("GQL raw response keys:", Object.keys(gqlRes || {}));
+
+    // Normalise response shape: v11 → { data }, v9/v10 → { body: { data } }
+    const gqlData = gqlRes?.data || gqlRes?.body?.data;
+    if (!gqlData) {
+      throw new Error('Empty or malformed GraphQL response. Keys: ' + Object.keys(gqlRes || {}).join(', '));
+    }
+
+    if (!gqlData.appSubscriptionCreate) {
+      throw new Error('appSubscriptionCreate missing in response. Keys: ' + Object.keys(gqlData).join(', '));
+    }
+
+    const { confirmationUrl, userErrors } = gqlData.appSubscriptionCreate;
 
     if (userErrors?.length > 0) {
-      throw new Error(userErrors[0].message);
+      console.error("Shopify billing userErrors:", userErrors);
+      throw new Error(userErrors.map(e => e.message).join('; '));
+    }
+
+    if (!confirmationUrl) {
+      throw new Error('No confirmationUrl returned from Shopify');
     }
 
     console.log("Billing charge created. Confirmation URL:", confirmationUrl);
