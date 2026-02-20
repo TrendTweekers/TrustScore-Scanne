@@ -442,11 +442,48 @@ app.get('/api/session-status', (req, res) => {
   });
 });
 
-// ExitIframe route to handle re-auth escaping
+// ExitIframe route — tells Shopify Admin (parent frame) to redirect out of
+// the embedded iframe back into the app with shop + host so App Bridge can init
 app.get('/exitiframe', (req, res) => {
   const shop = req.query.shop;
-  console.log('ExitIframe hit for shop:', shop);
-  res.redirect(`/api/auth?shop=${shop}`);
+  const host = req.query.host;
+  console.log(`[ExitIframe] shop=${shop} host=${host}`);
+
+  const appHost = (process.env.HOST || '').replace(/\/$/, '');
+  const redirectUrl = `${appHost}/?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`;
+  const adminOrigin = 'https://admin.shopify.com';
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!doctype html>
+<html>
+  <head><meta charset="utf-8" /></head>
+  <body>
+    <script>
+      (function () {
+        var redirectUrl = ${JSON.stringify(redirectUrl)};
+
+        // If we are NOT in an iframe, just navigate directly
+        if (window.top === window.self) {
+          window.location.assign(redirectUrl);
+          return;
+        }
+
+        // Tell Shopify Admin (parent frame) to redirect out of the iframe
+        var msg = JSON.stringify({
+          message: "Shopify.API.auth.exitIframe",
+          data: { redirectUrl: redirectUrl }
+        });
+
+        window.parent.postMessage(msg, ${JSON.stringify(adminOrigin)});
+
+        // Fallback: if postMessage is blocked, force top-level navigation
+        setTimeout(function () {
+          window.top.location.assign(redirectUrl);
+        }, 800);
+      })();
+    </script>
+  </body>
+</html>`);
 });
 
 // MUST be placed above any app.use('/api', ...) routes and above shopify.validateAuthenticatedSession()
