@@ -5,12 +5,12 @@ api_version = "2024-01"
 
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-uri = "/api/webhooks"
+uri = "https://trustscore-scanne-production.up.railway.app/api/webhooks"
 
 [[webhooks.subscriptions]]
 topics = ["app/uninstalled"]
-uri = "/api/webhooks"
+uri = "https://trustscore-scanne-production.up.railway.app/api/webhooks"
 
 [[webhooks.subscriptions]]
 topics = ["app_subscriptions/update"]
-uri = "/api/webhooks"
+uri = "https://trustscore-scanne-production.up.railway.app/api/webhooks"
