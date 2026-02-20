@@ -414,50 +414,12 @@ app.get(
 );
 
 // 3. Webhooks (Must be before express.json() and uses raw body for HMAC verification)
-// express.raw() ensures the body is NOT parsed before HMAC verification
-const webhookHandler = shopify.processWebhooks({ webhookHandlers });
-
+// express.raw() preserves raw body for HMAC signature validation
+// shopify.processWebhooks() validates HMAC automatically using the raw buffer
 app.post(
   shopify.config.webhooks.path,
   express.raw({ type: 'application/json' }),
-  async (req, res, next) => {
-    // Log webhook receipt with headers
-    const topic = req.get('x-shopify-topic') || req.get('X-Shopify-Topic') || 'unknown';
-    const shop = req.get('x-shopify-shop-domain') || req.get('X-Shopify-Shop-Domain') || 'unknown';
-    const hmac = req.get('x-shopify-hmac-sha256') || req.get('X-Shopify-Hmac-SHA256');
-    console.log(`[Webhook] Received: topic="${topic}" shop="${shop}" hmac_present=${!!hmac}`);
-
-    // Validate HMAC signature manually before processing
-    if (!hmac) {
-      console.error(`[Webhook] Missing HMAC signature for topic="${topic}" shop="${shop}"`);
-      return res.status(401).json({ error: 'Missing HMAC signature' });
-    }
-
-    // Continue to webhook handler
-    next();
-  },
-  async (req, res) => {
-    try {
-      // Shopify SDK validates HMAC automatically in processWebhooks
-      // If this succeeds, webhook was valid
-      await webhookHandler(req, res);
-    } catch (webhookErr) {
-      const topic = req.get('x-shopify-topic') || 'unknown';
-      const shop = req.get('x-shopify-shop-domain') || 'unknown';
-
-      // Invalid HMAC → 401 per Shopify privacy law compliance
-      if (webhookErr.message?.includes('HMAC') ||
-          webhookErr.message?.includes('signature') ||
-          webhookErr.message?.includes('unauthorized')) {
-        console.error(`[Webhook] HMAC validation failed for topic="${topic}" shop="${shop}":`, webhookErr.message);
-        return res.status(401).json({ error: 'HMAC verification failed' });
-      }
-
-      // Handler error but valid HMAC → 400
-      console.error(`[Webhook] Handler error for topic="${topic}" shop="${shop}":`, webhookErr.message);
-      return res.status(400).json({ error: 'Webhook processing failed' });
-    }
-  }
+  shopify.processWebhooks({ webhookHandlers })
 );
 
 // Debug: Ping route (unprotected)
