@@ -2,6 +2,7 @@ import { Bell, Mail, ShieldAlert, Lock, Send, CheckCircle2, Loader2 } from "luci
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useUmami } from "../hooks/useUmami";
 
 const MonitoringCard = ({ plan, onUpgrade }) => {
   const isPro = plan === "PRO" || plan === "PLUS";
@@ -11,6 +12,7 @@ const MonitoringCard = ({ plan, onUpgrade }) => {
   const [sentTo, setSentTo] = useState(null);
   const [error, setError] = useState(null);
   const authenticatedFetch = useAuthenticatedFetch();
+  const { trackEvent } = useUmami();
 
   useEffect(() => {
     if (!isPro) return;
@@ -26,6 +28,7 @@ const MonitoringCard = ({ plan, onUpgrade }) => {
   }, [isPro]);
 
   const handleSendTestReport = async () => {
+    trackEvent('test_report_clicked');
     setSending(true);
     setError(null);
     setSent(false);
@@ -33,13 +36,16 @@ const MonitoringCard = ({ plan, onUpgrade }) => {
       const res = await authenticatedFetch('/api/monitoring/test-email', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
+        trackEvent('test_report_sent', { sentTo: data.sentTo });
         setSent(true);
         setSentTo(data.sentTo);
         setTimeout(() => setSent(false), 4000);
       } else {
+        trackEvent('test_report_failed', { error: data.error });
         setError(data.error || 'Failed to send');
       }
     } catch (e) {
+      trackEvent('test_report_error', { error: e.message });
       setError('Failed to send report');
     } finally {
       setSending(false);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthenticatedFetch } from '../hooks/useAuthenticatedFetch';
+import { useUmami } from '../hooks/useUmami';
 import { ShieldCheck, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import DashboardHeader from './DashboardHeader';
 import ScoreHero from './ScoreHero';
@@ -115,12 +116,21 @@ const Dashboard = () => {
   const [lastScanScreenshots, setLastScanScreenshots] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const authenticatedFetch = useAuthenticatedFetch();
+  const { trackEvent } = useUmami();
   const progressRef = useRef(null);
   const reviewCheckedRef = useRef(false);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+    trackEvent('dashboard_loaded');
+  }, [trackEvent]);
+
+  // Track tab changes
+  useEffect(() => {
+    if (activeTab !== 'dashboard') {
+      trackEvent(`tab_changed_to_${activeTab}`);
+    }
+  }, [activeTab, trackEvent]);
 
   useEffect(() => {
     return () => {
@@ -201,6 +211,7 @@ const Dashboard = () => {
   };
 
   const handleReviewClick = async () => {
+    trackEvent('review_submitted');
     setShowReviewModal(false);
     try {
       await authenticatedFetch('/api/review/completed', { method: 'POST' });
@@ -208,6 +219,7 @@ const Dashboard = () => {
   };
 
   const handleReviewDismiss = async () => {
+    trackEvent('review_dismissed');
     setShowReviewModal(false);
     try {
       await authenticatedFetch('/api/review/dismissed', { method: 'POST' });
@@ -215,6 +227,7 @@ const Dashboard = () => {
   };
 
   const handleRunScan = async () => {
+    trackEvent('scan_started', { timestamp: new Date().toISOString() });
     setIsScanning(true);
     setScanProgress(0);
     setScanError(null);
@@ -235,6 +248,12 @@ const Dashboard = () => {
 
       const scanData = await response.json();
 
+      // Track successful scan
+      trackEvent('scan_completed', {
+        score: scanData.score || 0,
+        duration_ms: scanProgress * 100
+      });
+
       // Capture screenshots from scan response
       if (scanData.screenshots) {
         setLastScanScreenshots(scanData.screenshots);
@@ -246,6 +265,7 @@ const Dashboard = () => {
       await loadDashboard();
     } catch (err) {
       console.error('Scan failed:', err);
+      trackEvent('scan_failed', { error: err.message });
       setScanError('Scan failed. Please try again.');
     } finally {
       clearInterval(progressRef.current);
@@ -260,6 +280,8 @@ const Dashboard = () => {
     // Detect that and fall back to 'PRO'.
     if (!planKey || typeof planKey !== 'string') planKey = 'PRO';
 
+    trackEvent('upgrade_clicked', { plan: planKey });
+
     try {
       const response = await authenticatedFetch('/api/billing/subscribe', {
         method: 'POST',
@@ -270,12 +292,15 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (data.confirmationUrl) {
+        trackEvent('upgrade_initiated', { plan: planKey });
         // Break out of the iframe and go to Shopify billing approval page
         window.top.location.href = data.confirmationUrl;
       } else {
+        trackEvent('upgrade_failed', { plan: planKey, reason: 'no_confirmation_url' });
         console.error('Billing error: no confirmationUrl returned', data);
       }
     } catch (error) {
+      trackEvent('upgrade_failed', { plan: planKey, error: error.message });
       console.error('Billing error:', error);
     }
   };

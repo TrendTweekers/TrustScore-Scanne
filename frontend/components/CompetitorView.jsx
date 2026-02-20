@@ -3,8 +3,10 @@ import { AlertTriangle, Search, Loader2, Lock, Clock, ExternalLink } from "lucid
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useUmami } from "../hooks/useUmami";
 
 const CompetitorView = ({ yourScore, plan, auditsUsed, auditsLimit, onUpgrade }) => {
+  const { trackEvent } = useUmami();
   const [competitorUrl, setCompetitorUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -33,6 +35,7 @@ const CompetitorView = ({ yourScore, plan, auditsUsed, auditsLimit, onUpgrade })
   const handleScan = async () => {
     if (!competitorUrl.trim() || !isPro) return;
 
+    trackEvent('competitor_scan_started', { url: competitorUrl.trim() });
     setIsScanning(true);
     setScanError(null);
     setScanResult(null);
@@ -45,9 +48,18 @@ const CompetitorView = ({ yourScore, plan, auditsUsed, auditsLimit, onUpgrade })
       });
 
       const data = await response.json();
+      trackEvent('competitor_scan_completed', {
+        url: competitorUrl.trim(),
+        score: data.score || 0,
+        auditsUsed: auditsUsed + 1
+      });
       setScanResult(data);
       await loadHistory();
     } catch (err) {
+      trackEvent('competitor_scan_failed', {
+        url: competitorUrl.trim(),
+        error: err.message
+      });
       console.error('Competitor scan failed:', err);
       setScanError(err.message || 'Scan failed. The site may block automated scanning.');
     } finally {

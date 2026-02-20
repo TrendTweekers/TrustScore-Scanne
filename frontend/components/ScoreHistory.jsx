@@ -1,7 +1,9 @@
 import { BarChart3, Lock } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { useUmami } from "../hooks/useUmami";
 
 const ScoreHistory = ({ history = [], plan = "FREE", onUpgrade }) => {
+  const { trackEvent } = useUmami();
   const isPro = plan === "PRO" || plan === "PLUS";
 
   // Build chart data from history array (most recent last for the chart)
@@ -41,7 +43,10 @@ const ScoreHistory = ({ history = [], plan = "FREE", onUpgrade }) => {
               <p className="text-sm font-semibold mb-1">Score History</p>
               <p className="text-xs text-muted-foreground mb-3">Track your progress over time</p>
               <button
-                onClick={onUpgrade}
+                onClick={() => {
+                  trackEvent('score_history_upgrade_clicked');
+                  onUpgrade('PRO');
+                }}
                 className="px-4 py-1.5 rounded-lg bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-opacity"
               >
                 Upgrade to PRO
