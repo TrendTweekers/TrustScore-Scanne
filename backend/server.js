@@ -735,18 +735,31 @@ app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/privacy.html'));
 });
 
-// ─── Embedded App Frontend Serving ──────────────────────────────────
-// For embedded apps: always serve index.html regardless of shop param
-// App Bridge handles auth on the client side
-// This allows the app to load in the Shopify admin iframe
-
-// Serve frontend static assets (css, js, etc)
+// ─── Frontend Serving ────────────────────────────────────────────────
+// Serve static assets (js, css, images) unconditionally
 app.use(serveStatic(FRONTEND_PATH, { index: false }));
 
-// Catch-all: serve index.html for any unmatched route
-// This allows client-side routing to work (SPA behavior)
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
+// Catch-all route — two behaviours based on whether `host` is present:
+//
+//   No host param  → direct browser access (not inside Shopify Admin)
+//                    Serve index.html immediately; frontend shows StandaloneNotice
+//
+//   Host present   → embedded in Shopify Admin iframe
+//                    Run ensureInstalledOnShop() so Shopify can redirect to
+//                    OAuth if the shop hasn't installed the app yet, then serve
+//                    index.html for the React SPA to boot
+app.get('/*', (req, res, next) => {
+  if (!req.query.host) {
+    // Not embedded — serve frontend so StandaloneNotice renders
+    return res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
+  }
+  // Embedded — enforce installation check
+  return next();
+}, shopify.ensureInstalledOnShop(), (req, res) => {
+  res
+    .status(200)
+    .set('Content-Type', 'text/html')
+    .sendFile(path.join(FRONTEND_PATH, 'index.html'));
 });
 
 app.listen(PORT, () => {
