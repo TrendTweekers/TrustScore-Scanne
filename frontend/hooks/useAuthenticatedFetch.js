@@ -72,17 +72,24 @@ function getIdToken(shopify, timeoutMs = 8000) {
   ]);
 }
 
-/** Navigate the top-level window to OAuth — breaks out of any iframe. */
+/**
+ * Navigate the top-level window to OAuth to re-establish session.
+ *
+ * window.top.location.href is blocked by browsers when the iframe is
+ * cross-origin (Shopify Admin is on admin.shopify.com, app is on Railway).
+ * The correct cross-origin iframe escape is window.open(url, '_top') — this
+ * is the same technique the App Bridge CDN script itself uses internally
+ * (it lists '_top' as a valid navigation target).
+ */
 function redirectToAuth() {
   const shop = getShopFromUrl();
   const host = getHostFromUrl();
   const url = `/api/auth?shop=${encodeURIComponent(shop)}${host ? '&host=' + encodeURIComponent(host) : ''}`;
-  console.log('[authenticatedFetch] redirecting top frame to OAuth:', url);
-  try {
-    window.top.location.href = url;
-  } catch (e) {
-    window.location.href = url;
-  }
+  const absUrl = `${window.location.origin}${url}`;
+  console.log('[authenticatedFetch] redirecting to OAuth via window.open(_top):', absUrl);
+  // window.open with '_top' navigates the outermost browsing context —
+  // works cross-origin unlike window.top.location.href assignment
+  window.open(absUrl, '_top');
 }
 
 export function useAuthenticatedFetch() {
