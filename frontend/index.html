@@ -6,29 +6,13 @@
     <title>Dashboard – TrustScore</title>
     <link rel="icon" type="image/svg+xml" href="/assets/trustscore-logo.svg" />
 
-    <!-- App Bridge v4: MUST be before any app JS. Injects window.shopify. -->
-    <meta name="shopify-api-key" content="%VITE_SHOPIFY_API_KEY%" />
+    <!-- App Bridge v4: MUST load before any app JS.
+         The CDN script reads the shopify-api-key meta tag and injects
+         window.shopify (including idToken()) into the page.
+         API key is hardcoded here — %VITE_SHOPIFY_API_KEY% was not being
+         substituted in Railway's committed dist build. -->
+    <meta name="shopify-api-key" content="2c6ba70e4e05e577b797e156f2397b05" />
     <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-
-    <!-- Umami analytics DISABLED - causing 429 rate limit errors
-    <script
-      defer
-      src="https://cloud.umami.is/script.js"
-      data-website-id="52bac8a6-c9da-4f6d-a8d2-6ba66efb14fc"
-      data-auto-track="true">
-    </script>
-    <script>
-      window.addEventListener("load", function () {
-        if (!window.umami) {
-          const s = document.createElement("script");
-          s.src = "https://cloud.umami.is/script.js";
-          s.defer = true;
-          s.setAttribute("data-website-id", "52bac8a6-c9da-4f6d-a8d2-6ba66efb14fc");
-          document.head.appendChild(s);
-        }
-      });
-    </script>
-    -->
   </head>
   <body>
     <div id="app"></div>
