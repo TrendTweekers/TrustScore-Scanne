@@ -3,154 +3,164 @@ import { useCallback } from 'react';
 /**
  * App Bridge v4 authenticated fetch hook.
  *
- * window.shopify is injected by cdn.shopify.com/shopifycloud/app-bridge.js.
- * The CDN script reads <meta name="shopify-api-key" content="..."> to init.
- * If the meta tag has the wrong/missing key, window.shopify exists as a stub
- * but idToken() is NOT defined — causing "Cannot read properties of undefined".
+ * The backend uses shopify.validateAuthenticatedSession() which validates a
+ * JWT Bearer token — NOT session cookies. So we must get the token from
+ * window.shopify.idToken().
  *
- * waitForShopify() polls until typeof window.shopify.idToken === 'function'.
+ * If idToken() hangs (common when App Bridge can't handshake with the parent
+ * frame), we time out and redirect to /api/auth to re-establish the session.
  */
 
-function waitForShopify(maxMs = 8000) {
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      const s = window.shopify;
-      if (s && typeof s.idToken === 'function') return true;
-      return false;
-    };
+function getShopFromUrl() {
+  return new URLSearchParams(window.location.search).get('shop') || '';
+}
 
-    if (check()) {
+function getHostFromUrl() {
+  return new URLSearchParams(window.location.search).get('host') || '';
+}
+
+/** Poll until window.shopify.idToken is a real function, up to maxMs. */
+function waitForShopify(maxMs = 6000) {
+  return new Promise((resolve, reject) => {
+    if (typeof window.shopify?.idToken === 'function') {
       console.log('[waitForShopify] already ready');
       resolve(window.shopify);
       return;
     }
 
-    console.log('[waitForShopify] polling... window.shopify:', !!window.shopify,
-      '| idToken type:', typeof window.shopify?.idToken,
-      '| shopify keys:', window.shopify ? Object.keys(window.shopify).join(',') : 'none');
+    console.log('[waitForShopify] polling...', {
+      shopifyExists: !!window.shopify,
+      idTokenType: typeof window.shopify?.idToken,
+      keys: window.shopify ? Object.keys(window.shopify) : [],
+    });
 
     const start = Date.now();
     const timer = setInterval(() => {
       const elapsed = Date.now() - start;
-
-      if (check()) {
+      if (typeof window.shopify?.idToken === 'function') {
         clearInterval(timer);
-        console.log('[waitForShopify] idToken ready after', elapsed, 'ms');
+        console.log('[waitForShopify] ready after', elapsed, 'ms');
         resolve(window.shopify);
-        return;
-      }
-
-      // Log state every second so we can see what's on window.shopify
-      if (elapsed % 1000 < 110) {
-        console.log('[waitForShopify] still waiting...', elapsed, 'ms',
-          '| window.shopify:', !!window.shopify,
-          '| idToken type:', typeof window.shopify?.idToken,
-          '| keys:', window.shopify ? Object.keys(window.shopify).join(',') : 'none');
-      }
-
-      if (elapsed >= maxMs) {
+      } else if (elapsed >= maxMs) {
         clearInterval(timer);
-        const keys = window.shopify ? Object.keys(window.shopify).join(', ') : 'none';
-        const msg = `window.shopify.idToken() not available after ${maxMs}ms. ` +
-          `window.shopify exists: ${!!window.shopify}. ` +
-          `Available keys: [${keys}]. ` +
-          `Check: (1) <meta name="shopify-api-key"> has correct Client ID, ` +
-          `(2) app-bridge.js CDN script loaded successfully, ` +
-          `(3) app is opened inside Shopify Admin iframe (not standalone).`;
-        console.error('[waitForShopify] TIMEOUT:', msg);
-        reject(new Error(msg));
+        console.error('[waitForShopify] timeout after', maxMs, 'ms', {
+          shopifyExists: !!window.shopify,
+          idTokenType: typeof window.shopify?.idToken,
+          keys: window.shopify ? Object.keys(window.shopify) : [],
+        });
+        reject(new Error('window.shopify.idToken not ready after ' + maxMs + 'ms'));
       }
-    }, 100);
+    }, 150);
   });
 }
 
-async function getIdTokenWithTimeout(shopify, timeoutMs = 10000) {
-  console.log('[authenticatedFetch] calling idToken()...');
-  console.log('[authenticatedFetch] window.shopify keys:', Object.keys(shopify));
-  console.log('[authenticatedFetch] idToken type:', typeof shopify.idToken);
-
+/** Get idToken with a hard timeout. idToken() can hang if App Bridge cannot
+ *  communicate with the Shopify Admin parent frame. */
+function getIdToken(shopify, timeoutMs = 8000) {
+  console.log('[getIdToken] calling idToken()...');
   return Promise.race([
-    shopify.idToken().then(token => {
-      console.log('[authenticatedFetch] idToken resolved, length:', token?.length ?? 0);
-      return token;
+    shopify.idToken().then(t => {
+      console.log('[getIdToken] resolved, length:', t?.length ?? 0);
+      return t;
     }),
     new Promise((_, reject) =>
       setTimeout(() => {
-        console.error('[authenticatedFetch] ✗ idToken() timed out after', timeoutMs, 'ms');
-        reject(new Error(`idToken() timed out after ${timeoutMs}ms — App Bridge may not be fully initialized`));
+        console.error('[getIdToken] timed out after', timeoutMs, 'ms');
+        reject(new Error('idToken() timed out after ' + timeoutMs + 'ms'));
       }, timeoutMs)
     ),
   ]);
 }
 
+/** Navigate the top-level window to OAuth — breaks out of any iframe. */
+function redirectToAuth() {
+  const shop = getShopFromUrl();
+  const host = getHostFromUrl();
+  const url = `/api/auth?shop=${encodeURIComponent(shop)}${host ? '&host=' + encodeURIComponent(host) : ''}`;
+  console.log('[authenticatedFetch] redirecting top frame to OAuth:', url);
+  try {
+    window.top.location.href = url;
+  } catch (e) {
+    window.location.href = url;
+  }
+}
+
 export function useAuthenticatedFetch() {
   return useCallback(async (uri, options = {}) => {
-    console.log('[authenticatedFetch] ▶ starting:', uri);
+    console.log('[authenticatedFetch] ▶', uri);
 
-    // Step 1: wait for window.shopify.idToken to be a real function
+    // Step 1 — wait for App Bridge to inject window.shopify.idToken
     let shopify;
     try {
       shopify = await waitForShopify();
     } catch (err) {
-      console.error('[authenticatedFetch] ✗ waitForShopify failed:', err.message);
-      throw err;
+      // App Bridge did not initialize — trigger fresh OAuth in the top frame
+      console.error('[authenticatedFetch] App Bridge not ready:', err.message);
+      redirectToAuth();
+      return new Promise(() => {}); // suspend — page is navigating away
     }
 
-    // Step 2: get session token with explicit timeout (idToken can hang forever)
+    // Step 2 — get JWT with timeout (idToken can hang if bridge can't
+    // handshake with Shopify Admin parent frame — always race against timer)
     let token;
     try {
-      token = await getIdTokenWithTimeout(shopify, 10000);
-    } catch (error) {
-      console.error('[authenticatedFetch] ✗ getIdToken failed:', error.message);
-      throw error;
+      token = await getIdToken(shopify);
+    } catch (err) {
+      console.error('[authenticatedFetch] idToken failed:', err.message);
+      redirectToAuth();
+      return new Promise(() => {});
     }
 
     if (!token) {
-      console.error('[authenticatedFetch] ✗ idToken returned empty/null');
-      throw new Error('Empty session token from Shopify bridge');
+      console.error('[authenticatedFetch] empty token');
+      redirectToAuth();
+      return new Promise(() => {});
     }
 
-    // Step 3: make the request with 10 s hard timeout
+    // Step 3 — make the request with 15 s timeout
     const headers = { ...options.headers, Authorization: `Bearer ${token}` };
     let response;
     try {
-      console.log('[authenticatedFetch] fetching', uri, '...');
+      console.log('[authenticatedFetch] fetching', uri);
       response = await fetch(uri, {
         ...options,
         headers,
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(15000),
       });
-      console.log('[authenticatedFetch] ✓ response:', response.status, uri);
+      console.log('[authenticatedFetch] ✓', response.status, uri);
     } catch (err) {
       if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-        console.error('[authenticatedFetch] ✗ fetch timed out after 10 s:', uri);
+        console.error('[authenticatedFetch] fetch timed out:', uri);
         throw new Error('Request timed out: ' + uri);
       }
-      console.error('[authenticatedFetch] ✗ fetch threw:', err.message, uri);
+      console.error('[authenticatedFetch] fetch error:', err.message);
       throw err;
     }
 
-    // Step 4: handle 401 — refresh token and retry once
+    // Step 4 — 401: refresh token once, then re-auth if still failing
     if (response.status === 401 || response.headers.get('X-Shopify-API-Request-Failure-Reauthorize') === '1') {
-      console.log('[authenticatedFetch] 401 — refreshing token and retrying once');
+      console.log('[authenticatedFetch] 401 — refreshing token');
       try {
-        const freshToken = await getIdTokenWithTimeout(shopify, 10000);
-        const retryResp = await fetch(uri, {
+        const fresh = await getIdToken(shopify, 8000);
+        const retry = await fetch(uri, {
           ...options,
-          headers: { ...options.headers, Authorization: `Bearer ${freshToken}` },
-          signal: AbortSignal.timeout(10000),
+          headers: { ...options.headers, Authorization: `Bearer ${fresh}` },
+          signal: AbortSignal.timeout(15000),
         });
-        console.log('[authenticatedFetch] retry response:', retryResp.status, uri);
-        if (retryResp.ok) return retryResp;
-        throw new Error(`Auth failed after refresh (${retryResp.status})`);
+        console.log('[authenticatedFetch] retry', retry.status, uri);
+        if (retry.ok) return retry;
+        console.error('[authenticatedFetch] still 401 after refresh — re-auth');
+        redirectToAuth();
+        return new Promise(() => {});
       } catch (err) {
-        console.error('[authenticatedFetch] ✗ token refresh failed:', err.message);
-        throw err;
+        console.error('[authenticatedFetch] refresh failed:', err.message);
+        redirectToAuth();
+        return new Promise(() => {});
       }
     }
 
     if (!response.ok) {
-      console.error('[authenticatedFetch] ✗ non-OK response:', response.status, uri);
+      console.error('[authenticatedFetch] non-OK:', response.status, uri);
       throw new Error(`HTTP error ${response.status}`);
     }
 
