@@ -467,18 +467,28 @@ app.get('/api/session-status', (req, res) => {
   });
 });
 
-// ExitIframe — breaks out of Shopify Admin iframe to start OAuth
-// redirectUrl goes to /api/auth so Shopify SDK handles the OAuth dance
+// ExitIframe — App Bridge v4 version
+//
+// In v4, the CDN script manages OAuth automatically. This route is only hit
+// if useAuthenticatedFetch triggers a 401 re-auth. We just need to navigate
+// the TOP-LEVEL window (not the iframe) to /api/auth so OAuth can run.
+//
+// The old v3 postMessage approach is intentionally removed:
+//   - postMessage requires knowing the exact parent origin
+//   - ancestorOrigins[0] can return the Railway URL instead of admin.shopify.com
+//   - This caused "wrong target origin" console errors
+//
+// In v4, window.top.location.href is the correct escape hatch.
 app.get('/exitiframe', (req, res) => {
   const shop = req.query.shop;
   const host = req.query.host;
 
   if (!shop) return res.status(400).send('Missing shop');
 
-  console.log(`[ExitIframe] shop=${shop} host=${host}`);
+  console.log(`[ExitIframe] v4 redirect — shop=${shop}`);
 
   const appHost = (process.env.HOST || '').replace(/\/$/, '');
-  const redirectUrl = `${appHost}/api/auth?shop=${encodeURIComponent(shop)}` +
+  const authUrl = `${appHost}/api/auth?shop=${encodeURIComponent(shop)}` +
     (host ? `&host=${encodeURIComponent(host)}` : '');
 
   res.set('Content-Type', 'text/html');
@@ -487,31 +497,13 @@ app.get('/exitiframe', (req, res) => {
   <head><meta charset="utf-8" /></head>
   <body>
     <script>
-      (function () {
-        var redirectUrl = ${JSON.stringify(redirectUrl)};
-
-        // Use real parent origin when available, fall back to admin.shopify.com
-        var adminOrigin =
-          (window.location.ancestorOrigins &&
-           window.location.ancestorOrigins.length &&
-           window.location.ancestorOrigins[0]) ||
-          "https://admin.shopify.com";
-
-        var payload = JSON.stringify({
-          message: "Shopify.API.auth.exitIframe",
-          data: { redirectUrl: redirectUrl }
-        });
-
-        try {
-          window.parent.postMessage(payload, adminOrigin);
-        } catch (e) {}
-
-        // Fallback: escape iframe directly after short delay
-        setTimeout(function () {
-          try { window.top.location.assign(redirectUrl); }
-          catch (e) { window.location.assign(redirectUrl); }
-        }, 800);
-      })();
+      // Navigate the top-level window to OAuth — escapes out of Shopify iframe
+      try {
+        window.top.location.href = ${JSON.stringify(authUrl)};
+      } catch (e) {
+        // Cross-origin guard: fall back to navigating this frame
+        window.location.href = ${JSON.stringify(authUrl)};
+      }
     </script>
   </body>
 </html>`);
@@ -542,7 +534,11 @@ app.use('/api/*', (req, res, next) => {
 // Set up Shopify authentication and webhook handling
 // (Moved to top of middleware stack)
 
-app.use(shopify.cspHeaders()); // Ensure CSP headers are set
+// NOTE: shopify.cspHeaders() is intentionally NOT used here.
+// It overwrites the helmet frame-ancestors directive we set above, reverting
+// it back to 'self' which blocks Shopify Admin from loading the app in an iframe.
+// Our helmet config already sets the correct frame-ancestors for App Bridge v4.
+// app.use(shopify.cspHeaders());
 
 // ADMIN ENDPOINTS - Test endpoint first
 app.all('/admin/test', (req, res) => {
@@ -807,23 +803,22 @@ app.get('/privacy', (req, res) => {
 // Serve static assets (js, css, images) unconditionally
 app.use(serveStatic(FRONTEND_PATH, { index: false }));
 
-// Catch-all route — two behaviours based on whether `host` is present:
+// Catch-all — always serve index.html for GET requests.
 //
-//   No host param  → direct browser access (not inside Shopify Admin)
-//                    Serve index.html immediately; frontend shows StandaloneNotice
+// In App Bridge v4, OAuth is handled by the CDN script (app-bridge.js) and
+// the Shopify Admin shell — NOT by ensureInstalledOnShop() on the HTML route.
+// Using ensureInstalledOnShop() here caused an OAuth loop:
+//   1. No session → redirect to /exitiframe
+//   2. exitiframe tries to open accounts.shopify.com inside iframe → blocked
+//   3. Back to step 1 forever
 //
-//   Host present   → embedded in Shopify Admin iframe
-//                    Run ensureInstalledOnShop() so Shopify can redirect to
-//                    OAuth if the shop hasn't installed the app yet, then serve
-//                    index.html for the React SPA to boot
-app.get('/*', (req, res, next) => {
-  if (!req.query.host) {
-    // Not embedded — serve frontend so StandaloneNotice renders
-    return res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
-  }
-  // Embedded — enforce installation check
-  return next();
-}, shopify.ensureInstalledOnShop(), (req, res) => {
+// Correct v4 flow:
+//   Backend serves index.html → App Bridge CDN script loads → detects no session
+//   → redirects top-level window to /api/auth (outside iframe) → OAuth completes
+//   → session created → app loads normally
+//
+// ensureInstalledOnShop() is still used on /api/* routes to validate JWT tokens.
+app.get('/*', (req, res) => {
   res
     .status(200)
     .set('Content-Type', 'text/html')
